@@ -13,11 +13,15 @@ mkdir dtools
 ```bash
 cd dtools
 ```
-3. Create file `rc.sh`:
+3. Create `core` directory as **git submodule**:
+```bash
+git submodule add git@github.com:carmenere/dtools.git core
+```
+4. Create file `rc.sh`:
 ```bash
 touch rc.sh
 ```
-4. Add to `rc.sh`:
+5. Add to `rc.sh`:
 ```bash
 DT_DTOOLS=$(dirname "$(realpath $0)")
 
@@ -26,22 +30,22 @@ echo "Loading lib ... "
 
 dt_rc
 ```
-5. Create directories:
+6. Create directories:
 ```bash
 mkdir .locals
 mkdir commands
 mkdir ctxes
 mkdir stands
 ```
-6. Add `**/.locals/` to file `.gitignore`.
-7. Create `rc.sh` in each directory:
+7. Add `**/.locals/` to file `.gitignore`.
+8. Create `rc.sh` in each directory:
 ```bash
 touch .locals/rc.sh
 touch commands/rc.sh
 touch ctxes/rc.sh
 touch stands/rc.sh
 ```
-8. Add `dt_rc_load %dirname% $(dirname $(realpath "$0"))` to rc.sh file in appropriate directory `%dirname%`:
+9. Add `dt_rc_load %dirname% $(dirname $(realpath "$0"))` to rc.sh file in appropriate directory `%dirname%`:
 - `dt_rc_load .locals $(dirname $(realpath "$0"))` to file `.locals/rc.sh`;
 - `dt_rc_load commands $(dirname $(realpath "$0"))` to file `commands/rc.sh`;
 - `dt_rc_load ctxes $(dirname $(realpath "$0"))` to file `ctxes/rc.sh`;
