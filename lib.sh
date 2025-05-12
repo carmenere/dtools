@@ -1,17 +1,3 @@
-#self_dir=
-#
-## dtools directory
-#DT_CORE_LIB="$(dirname "$0")"
-##
-##DT_COMMANDS="${DT_CORE_DIR}"/..
-##DT_STANDS="${DT_CORE_DIR}"/..
-##DT_CTXES="${DT_CORE_DIR}"/..
-##DT_LOCAL="${DT_CORE_DIR}"/..
-
-# Derived paths
-export DT_ARTEFACTS="${DTOOLS}/.artefacts"
-export DT_LOGS_DIR="${DT_ARTEFACTS}/.logs"
-
 function dt_target() {
   if [ -n "$1" ]; then
     echo "${BOLD}[dtools]${RESET} Targert: ${GREEN}${BOLD}$1${RESET}"
@@ -57,11 +43,26 @@ function dt_rc_load() {
   done
 }
 
-function dt_rc() {
-  . $(realpath "./${DT_CORE}/rc.sh")
-  . $(realpath "./${DT_COMMANDS}/rc.sh")
-  . $(realpath "./${DT_CTXES}/rc.sh")
-  . $(realpath "./${DT_STANDS}/rc.sh")
-  . $(realpath "./${DT_LOCAL}/rc.sh")
+function dt_rc_paths() {
+  if [ -z "${DT_DTOOLS}" ]; then DT_DTOOLS="$(pwd)"; fi
+  DT_CORE=${DT_DTOOLS}/core
+  DT_COMMANDS=${DT_DTOOLS}/commands
+  DT_CTXES=${DT_DTOOLS}/ctxes
+  DT_STANDS=${DT_DTOOLS}/stands
+  DT_LOCAL=${DT_DTOOLS}/.locals
 }
 
+function dt_rc() {
+  dt_rc_paths
+  . "${DT_CORE}/rc.sh"
+  . "${DT_COMMANDS}/rc.sh"
+  . "${DT_CTXES}/rc.sh"
+  . "${DT_STANDS}/rc.sh"
+  . "${DT_LOCAL}/rc.sh"
+}
+
+function dt_paths() {
+  # Derived paths
+  DT_ARTEFACTS="${DT_DTOOLS}/.artefacts"
+  DT_LOGS_DIR="${DT_ARTEFACTS}/.logs"
+}
