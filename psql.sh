@@ -1,7 +1,7 @@
 # '\gexec'
 # echo "${query}" '\gexec' | ...
 function psql_exec() {
-  if [ "$2" = "echo" ]; then echo "$1"; else dt_exec "echo $1"; fi
+  if [ "$2" = "echo" ]; then echo "$1"; else dt_exec "$1"; fi
 }
 
 function psql_history() {
@@ -35,7 +35,7 @@ function psql_conn_admin() {
 function psql_alter_admin_password() {
   query=$( pg_user_admin; pg_sql_alter_role_password )
   cmd=$(pg_db_postgres; psql_conn_admin echo)
-  cmd="$'${query}' | ${cmd}"
+  cmd="echo $'${query}' | ${cmd}"
   psql_exec "${cmd}" "$1"
 }
 

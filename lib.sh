@@ -6,7 +6,6 @@ function dt_target() {
 }
 
 function dt_exec() {
-  echo dt_exec="$1"
   if [ -n "$1" ]; then
     echo "${BOLD}[dtools]${RESET} Command: ${BOLD}${GRAY} $1 ${RESET}"
     eval $1
