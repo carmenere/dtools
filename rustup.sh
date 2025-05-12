@@ -1,11 +1,3 @@
-function rust_version() {
-  echo "1.99.0"
-}
-
-function rust_nightly_version() {
-  echo "nightly-2025-05-01"
-}
-
 function rust_arch() {
   arch=$(uname -m)
   if [ "${arch}" = "arm64" ]; then
@@ -27,25 +19,32 @@ function rust_target_triple() {
 }
 
 function rustup_install() {
-  toolchain=$(rust_version)-$(rust_target_triple)
-	curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain "${toolchain}"
+  ctx_rustup
+  toolchain=${RUSTUP_TOOLCHAIN}-${RUSTUP_TARGET_TRIPLE};
+	echo "curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain ${toolchain}"
 }
 
 function rustup_toolchain_install() {
-  toolchain=$1; if [ -z "${toolchain} "]; then toolchain=$(rust_version)-$(rust_target_triple); fi
-	rustup toolchain install "${toolchain}"
+  toolchain=$1; if [ -z "${toolchain}" ]; then ctx_rustup; toolchain=${RUSTUP_TOOLCHAIN}-${RUSTUP_TARGET_TRIPLE}; fi
+	echo "rustup toolchain install ${toolchain}"
 }
 
 function rustup_default() {
-  toolchain=$1; if [ -z "${toolchain}" ]; then toolchain=$(rust_version)-$(rust_target_triple); fi
-	rustup default "${toolchain}"
+  toolchain=$1; if [ -z "${toolchain}" ]; then ctx_rustup; toolchain=${RUSTUP_TOOLCHAIN}-${RUSTUP_TARGET_TRIPLE}; fi
+	echo "rustup default ${toolchain}"
 }
 
 function rustup_component_add() {
-  components=$1; if [ -z "$components" ]; then components="clippy rustfmt"; fi
-	rustup +$(V) component add "${components}"
+  components=$1; if [ -z "$components" ]; then ctx_rustup; components="'${RUSTUP_COMPONENTS}'"; fi
+	echo "rustup component add ${components}"
 }
 
-function rustup_envs() {
-  RUSTUP_TOOLCHAIN=$(rust_version)
+function ctx_rustup() {
+  RUSTUP_TOOLCHAIN="1.99.0"
+  RUSTUP_TARGET_TRIPLE=$(rust_target_triple)
+  RUSTUP_COMPONENTS="clippy rustfmt"
+  NIGHTLY_VERSION="nightly-2025-05-01"
+  _envs=(
+    RUSTUP_TOOLCHAIN
+  )
 }

@@ -1,14 +1,15 @@
-function crate_sqlx() {
+function ctx_crate_sqlx() {
   CRATE_NAME="sqlx-cli"
   CRATE_VERSION="0.8.5"
+  cargo_flag_locked
 }
 
 function cargo_install_sqlx() {
-  ( crate_sqlx; dt_target cargo_install_locked )
+  ( ctx_crate_sqlx; cargo_install )
 }
 
 function cargo_uninstall_sqlx() {
-  ( crate_sqlx; dt_target cargo_uninstall )
+  ( ctx_crate_sqlx; cargo_uninstall )
 }
 
 function sqlx_pre_run() {

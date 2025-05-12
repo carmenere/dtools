@@ -1,20 +1,30 @@
-function pg_version() {
-  PG_MAJOR=17
-  PG_MINOR=4
-  PG_VERSION="${PG_MAJOR}.${PG_MINOR}"
+function pg_add_path() {
+  $(echo ${PATH} | grep -E -s "^$(pg_dir)" 1>/dev/null 2>&1)
+  if [ $? != 0 ] && [ -n "$(pg_dir)" ]; then PATH="$(pg_dir):${PATH}"; fi
 }
 
-function pg_host_default() {
-  PGHOST="localhost"
+function pg_hba() {
+  if [ "$(os_name)" = "macos" ]; then
+    echo "$(brew_prefix)/var/$(pg_service)/pg_hba.conf"
+  else
+    echo "/etc/postgresql/${PG_MAJOR}/main/pg_hba.conf"
+  fi
 }
 
-function pg_port_default() {
-  PGPORT=5432
+function pg_conf() {
+  if [ "$(os_name)" = "macos" ]; then
+    echo "$(brew_prefix)/var/$(pg_service)/postgresql.conf"
+  else
+    echo "/etc/postgresql/${PG_MAJOR}/main/postgresql.conf"
+  fi
 }
 
-function pg_socket() {
-  pg_host_default
-  pg_port_default
+function pg_service() {
+  if [ "$(os_name)" = "macos" ]; then
+    echo "postgresql@${PG_MAJOR}"
+  else
+    echo postgresql
+  fi
 }
 
 function pg_install() {
@@ -28,7 +38,7 @@ function pg_install() {
           libpq-dev
 
   elif [ "$(os_kernel)" = "Darwin" ]; then
-    brew install "$(pg_service)"
+    brew install "${SERVICE}"
   else
     echo "Unsupported OS: '$(os_kernel)'"; exit;
   fi
@@ -56,76 +66,64 @@ function pg_conf_set_port() {
 
 function pg_dir() {
   if [ "$(os_name)" = "macos" ]; then
-    PG_DIR="$(brew_prefix)/opt/postgresql@${PG_MAJOR}/bin"
+    echo "$(brew_prefix)/opt/postgresql@${PG_MAJOR}/bin"
   elif [ "$(os_name)" = "alpine" ]; then
-    PG_DIR="/usr/libexec/postgresql${PG_MAJOR}"
+    echo "/usr/libexec/postgresql${PG_MAJOR}"
   else
-    PG_DIR="/usr/lib/postgresql/${PG_MAJOR}/bin"
-  fi
-  echo "${PG_DIR}"
-}
-
-function pg_add_path() {
-  pg_dir
-  $(echo ${PATH} | grep -E -s "^$(pg_dir)" 1>/dev/null 2>&1)
-  if [ $? != 0 ] && [ -n "$(pg_dir)" ]; then PATH="$(pg_dir):${PATH}"; fi
-}
-
-function pg_hba() {
-  if [ "$(os_name)" = "macos" ]; then
-    PG_HBA="$(brew_prefix)/var/$(pg_service)/pg_hba.conf"
-  else
-    PG_HBA="/etc/postgresql/${PG_MAJOR}/main/pg_hba.conf"
-  fi
-  echo "${PG_HBA}"
-}
-
-function pg_conf() {
-  if [ "$(os_name)" = "macos" ]; then
-    PG_CONF="$(brew_prefix)/var/$(pg_service)/postgresql.conf"
-  else
-    PG_CONF="/etc/postgresql/${PG_MAJOR}/main/postgresql.conf"
-  fi
-  echo "${PG_CONF}"
-}
-
-function pg_cfg_paths() {
-  PG_CFG_LIBDIR="$(pg_config --pkglibdir | tr ' ' '\n')"
-  PG_CFG_SHAREDIR="$(pg_config --sharedir)"
-}
-
-function pg_service() {
-  if [ "$(os_name)" = "macos" ]; then
-    echo "postgresql@${PG_MAJOR}"
-  else
-    echo postgresql
+    echo "/usr/lib/postgresql/${PG_MAJOR}/bin"
   fi
 }
 
 function pg_stop() {
-  ( service_stop $(pg_service) )
+  ( ctx_pg; service_stop )
 }
 
 function pg_start() {
-  ( service_start $(pg_service) )
-}
-
-function pg_envs() {
-  pg_version
-  pg_add_path
-  pg_hba
-  pg_conf
-  pg_socket
-  pg_cfg_paths
+  ( ctx_pg; service_start )
 }
 
 function pg_lsof() {
   (
-    pg_socket
-    PORT=${PGPORT}
-    HOST=${PGHOST}
+    ctx_pg; PORT=${PGPORT}; HOST=${PGHOST}
     lsof_tcp
   )
 }
 
-DT_EXPORTS+=(pg_envs)
+function ctx_pg() {
+  pg_add_path
+  PGHOST="localhost"
+  PGPORT=5432
+  PG_CONF=$(pg_conf)
+  PG_DIR=$(pg_dir)
+  PG_HBA=$(pg_hba)
+  PG_MAJOR=17
+  PG_MINOR=4
+  SERVICE=$(pg_service)
+  PG_CFG_LIBDIR="$(pg_config --pkglibdir | tr ' ' '\n')"
+  PG_CFG_SHAREDIR="$(pg_config --sharedir)"
+
+  # Depends on PG_MAJOR and PG_MINOR
+  PG_VERSION="${PG_MAJOR}.${PG_MINOR}"
+
+  _envs=(PGHOST PGPORT)
+  _inline_envs=(${_envs[@]})
+}
+
+function pg_user_admin() {
+  PGPASSWORD="postgres"
+  if [ "$(os_name)" = "macos" ]; then
+    PGUSER="${USER}"
+  else
+    PGUSER=postgres
+  fi
+  _envs+=(PGUSER PGPASSWORD)
+  _inline_envs=(${_envs[@]})
+}
+
+function pg_db_postgres() {
+  PGDATABASE="postgres"
+  _envs+=(PGDATABASE)
+  _inline_envs=(${_envs[@]})
+}
+
+

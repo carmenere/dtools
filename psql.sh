@@ -1,4 +1,8 @@
-
+# '\gexec'
+# echo "${query}" '\gexec' | ...
+function psql_exec() {
+  if [ "$2" = "echo" ]; then echo "$1"; else dt_exec "echo $1"; fi
+}
 
 function psql_history() {
   if [ -z "${HIST_PROFILE}" ]; then return 0; fi
@@ -6,107 +10,33 @@ function psql_history() {
   PSQL_HISTORY="${HIST_DIR}/psql_${HIST_PROFILE}"
 }
 
-function psql_db_postgres() {
-  PGDATABASE="postgres"
-}
-
-function psql_user_admin() {
-  PGPASSWORD="postgres"
-  if [ "$(os_name)" = "macos" ]; then
-    PGUSER="${USER}"
-  else
-    PGUSER=postgres
-  fi
-  psql_db_postgres
-}
-
-function psql_user_default() {
-  psql_user_admin
-}
-
-function psql_db_default() {
-  psql_db_postgres
-}
-
-# If $1 is empty, by it will use psql_user_admin and psql_db_postgres.
+# Example ( pg_user_admin; pg_db_postgres; psql_conn)
 function psql_conn() {
-  user=$1
-  db=$2
-  (
-    if [ -z "$user" ]; then user=psql_user_default; fi
-    if [ -z "$db" ]; then db=psql_db_default; fi
-    dt_envs_export psql_user_$user
-    dt_envs_export psql_db_$db
-    psql
-  )
+  cmd=("$(dt_inline_envs)")
+  cmd+=(psql)
+  echo "${cmd}"
 }
 
-function psql_local_admin() {
-  (
-    psql_user_admin || return $?
+function psql_conn_local_admin() {
+  cmd=$(
+    pg_user_admin || return $?
     unset PGHOST
     sudo -u ${PGUSER} psql -d ${PGDATABASE}
   )
+  psql_exec "${cmd}" "$1"
 }
 
-# $1: username
-# In postgres the $$ ... $$ means dollar-quoted string.
-# So, we must escape each $ to avoid bash substitution: \$\$ ... \$\$.
-function psql_create_user() {
-  (
-    psql_user_$1 || return $?
-    QUERY=$(dt_escape_single_quotes "
-      SELECT \$\$CREATE USER ${PGUSER} WITH ENCRYPTED PASSWORD '${PGPASSWORD}'\$\$
-      WHERE NOT EXISTS (SELECT true FROM pg_roles WHERE rolname = '${PGUSER}')
-    ")
-    dt_cmd "echo $'${QUERY}' '\gexec' | psql_conn admin postgres" | tr -s ' '
-  )
-}
-
-# $1: username
-function psql_drop_user() {
-  (
-    psql_user_$1 || return $?
-    QUERY="DROP USER IF EXISTS ${PGUSER}"
-    dt_cmd "echo $'${QUERY}' '\gexec' | psql_conn admin postgres" | tr -s ' '
-  )
-}
-
-# $1: username
-function psql_create_db() {
-  (
-    psql_db_$1 || return $?
-    QUERY=$(dt_escape_single_quotes "
-      SELECT 'CREATE DATABASE ${PGDATABASE}'
-      WHERE NOT EXISTS (SELECT true FROM pg_database WHERE datname = '${PGDATABASE}')
-    ")
-    dt_cmd "echo $'${QUERY}' '\gexec' | psql_conn admin postgres" | tr -s ' '
-  )
-}
-
-# $1: username
-#
-function psql_drop_db() {
-  (
-    psql_db_$1 || return $?
-    QUERY=$(dt_escape_single_quotes "
-      SELECT 'DROP DATABASE IF EXISTS ${PGDATABASE}'
-      WHERE EXISTS (SELECT true FROM pg_database WHERE datname = '${PGDATABASE}')
-    ")
-    dt_cmd "echo $'${QUERY}' '\gexec' | psql_conn admin postgres" | tr -s ' '
-  )
-}
-
-function psql_alter_role_password() {
-  (
-    psql_user_$1 || return $?
-    QUERY="ALTER ROLE \"${PGUSER}\" WITH PASSWORD \'${PGPASSWORD}\'"
-    dt_cmd "echo $'${QUERY}' '\gexec' | psql_conn admin postgres" | tr -s ' '
-  )
+# "psql_conn_admin" can be run in any context, but it will always rewrite PGUSER and PGPASSWORD to pg_user_admin's values
+function psql_conn_admin() {
+  cmd=$( pg_user_admin; psql_conn )
+  psql_exec "${cmd}" "$1"
 }
 
 function psql_alter_admin_password() {
-  psql_alter_role_password admin postgres
+  query=$( pg_user_admin; pg_sql_alter_role_password )
+  cmd=$(pg_db_postgres; psql_conn_admin echo)
+  cmd="$'${query}' | ${cmd}"
+  psql_exec "${cmd}" "$1"
 }
 
 #function psql_dump_db() {
@@ -131,13 +61,3 @@ function psql_alter_admin_password() {
 #    echo "Ok"
 #  )
 #}
-
-
-
-function psql_envs() {
-  psql_user_migrator
-  psql_db_tetrix
-  psql_history
-}
-
-DT_EXPORTS+=(psql_envs)
