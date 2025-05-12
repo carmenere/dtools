@@ -51,7 +51,7 @@ function dt_paths() {
   DT_CORE=${DT_DTOOLS}/core
   DT_LOCALS=${DT_DTOOLS}/locals
   DT_STANDS=${DT_DTOOLS}/stands
-  DT_TOOLS=${DT_DTOOLS}/ctxes
+  DT_TOOLS=${DT_DTOOLS}/tools
 
   # Paths that depend on DT_ARTEFACTS
   DT_LOGS="${DT_ARTEFACTS}/.logs"
