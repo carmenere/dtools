@@ -43,26 +43,24 @@ function dt_rc_load() {
   done
 }
 
-function dt_rc_paths() {
+function dt_paths() {
   if [ -z "${DT_DTOOLS}" ]; then DT_DTOOLS="$(pwd)"; fi
+
+  # Paths that depend on DT_DTOOLS
+  DT_ARTEFACTS="${DT_DTOOLS}/.artefacts"
   DT_CORE=${DT_DTOOLS}/core
-  DT_COMMANDS=${DT_DTOOLS}/commands
-  DT_CTXES=${DT_DTOOLS}/ctxes
+  DT_LOCALS=${DT_DTOOLS}/locals
   DT_STANDS=${DT_DTOOLS}/stands
-  DT_LOCAL=${DT_DTOOLS}/.locals
+  DT_TOOLS=${DT_DTOOLS}/ctxes
+
+  # Paths that depend on DT_ARTEFACTS
+  DT_LOGS="${DT_ARTEFACTS}/.logs"
 }
 
 function dt_rc() {
-  dt_rc_paths
+  dt_paths
   . "${DT_CORE}/rc.sh"
-  . "${DT_COMMANDS}/rc.sh"
-  . "${DT_CTXES}/rc.sh"
+  . "${DT_LOCALS}/rc.sh"
   . "${DT_STANDS}/rc.sh"
-  . "${DT_LOCAL}/rc.sh"
-}
-
-function dt_paths() {
-  # Derived paths
-  DT_ARTEFACTS="${DT_DTOOLS}/.artefacts"
-  DT_LOGS_DIR="${DT_ARTEFACTS}/.logs"
+  . "${DT_TOOLS}/rc.sh"
 }

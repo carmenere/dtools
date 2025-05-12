@@ -32,24 +32,21 @@ dt_rc
 ```
 6. Create directories:
 ```bash
-mkdir .locals
-mkdir commands
-mkdir ctxes
+mkdir locals
 mkdir stands
+mkdir tools
 ```
-7. Add `**/.locals/` to file `.gitignore`.
+7. Add `**/locals/` to file `.gitignore`.
 8. Create `rc.sh` in each directory:
 ```bash
-touch .locals/rc.sh
-touch commands/rc.sh
-touch ctxes/rc.sh
+touch locals/rc.sh
 touch stands/rc.sh
+touch tools/rc.sh
 ```
 9. Add `dt_rc_load %dirname% $(dirname $(realpath "$0"))` to rc.sh file in appropriate directory `%dirname%`:
-- `dt_rc_load .locals $(dirname $(realpath "$0"))` to file `.locals/rc.sh`;
-- `dt_rc_load commands $(dirname $(realpath "$0"))` to file `commands/rc.sh`;
-- `dt_rc_load ctxes $(dirname $(realpath "$0"))` to file `ctxes/rc.sh`;
+- `dt_rc_load locals $(dirname $(realpath "$0"))` to file `locals/rc.sh`;
 - `dt_rc_load stands $(dirname $(realpath "$0"))` to file `stands/rc.sh`;
+- `dt_rc_load tools $(dirname $(realpath "$0"))` to file `tools/rc.sh`;
 
 <br>
 
@@ -59,20 +56,17 @@ project_root_dir
 ├── ...
 ├── dtools/
 │   ├── .gitignore
-│   ├── .locals/    # Must be added to .gitignore, it is for overwriting project defaults in local devel environment.
-│   │   ├── ...
-│   │   └── rc.sh
 │   ├── core/       # This directory is a git submodule to 'https://github.com/carmenere/dtools' project.
 │   │   ├── lib.sh
 │   │   ├── ...
 │   │   └── rc.sh
-│   ├── commands/
-│   │   ├── ...
-│   │   └── rc.sh
-│   ├── ctxes/
+│   ├── locals/    # Must be added to .gitignore (**/locals/). It is for overwriting project defaults in local devel environment.
 │   │   ├── ...
 │   │   └── rc.sh
 │   ├── stands/
+│   │   ├── ...
+│   │   └── rc.sh
+│   ├── tools/
 │   │   ├── ...
 │   │   └── rc.sh
 │   └── rc.sh       # Loads "${DT_DTOOLS}/core/lib.sh" and calls "dt_rc" function.

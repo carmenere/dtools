@@ -112,7 +112,7 @@ function psql_alter_admin_password() {
 #function psql_dump_db() {
 #  checks "$@" || return $?
 #  local DB=$(. "${DTOOLS}/pg/accounts/$1.sh" && echo "${PGDATABASE}")
-#  PG_DUMP="${DT_LOGS_DIR}/db-${DB}.dump"
+#  PG_DUMP="${DT_LOGS}/db-${DB}.dump"
 #  [ -d $(dirname ${PG_DUMP}) ] || mkdir -p $(dirname ${PG_DUMP})
 #  (
 #    . "${DTOOLS}/pg/accounts/admin.sh"
@@ -124,7 +124,7 @@ function psql_alter_admin_password() {
 #function psql_restore_db() {
 #  checks "$@" || return $?
 #  local DB=$(. "${DTOOLS}/pg/accounts/$1.sh" && echo "${PGDATABASE}")
-#  PG_DUMP="${DT_LOGS_DIR}/db-${PGDATABASE}.dump"
+#  PG_DUMP="${DT_LOGS}/db-${PGDATABASE}.dump"
 #  (
 #    . "${DTOOLS}/pg/accounts/admin.sh"
 #    pg_restore --no-owner -d ${DB} --single-transaction "${PG_DUMP}"
