@@ -14,7 +14,8 @@ function pg_sql_create_user() {
 }
 
 function pg_sql_drop_user() {
-  echo "DROP USER IF EXISTS ${PGUSER}"
+  query=$($1; echo "DROP USER IF EXISTS ${PGUSER}" )
+  echo "${query}"
 }
 
 function pg_sql_create_db() {
@@ -26,7 +27,7 @@ function pg_sql_create_db() {
 }
 
 function pg_sql_drop_db() {
-  query=$(dt_escape_single_quotes "
+  query=$($1; dt_escape_single_quotes "
     SELECT 'DROP DATABASE IF EXISTS ${PGDATABASE}'
     WHERE EXISTS (SELECT true FROM pg_database WHERE datname = '${PGDATABASE}')
   ")

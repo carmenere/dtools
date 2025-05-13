@@ -6,6 +6,20 @@ function ctx_psql_conn_admin() {
   pg_user_admin
 }
 
+function psql_conn_local_admin() {
+  cmd=$(
+    ctx_psql_conn_admin || return $?
+    unset PGHOST
+    sudo -u ${PGUSER} psql -d ${PGDATABASE}
+  )
+  psql_exec cmd="$cmd" m=$mode
+}
+
+# "psql_conn_admin" can be run in any context, but it will always rewrite PGUSER and PGPASSWORD to pg_user_admin's values
+function psql_conn_admin() {
+  psql_conn ctx=admin
+}
+
 # for example, pattern may be *=
 #${VAR#pattern}     # delete shortest match of pattern from the beginning
 #${VAR##pattern}    # delete longest match of pattern from the beginning
@@ -13,7 +27,6 @@ function ctx_psql_conn_admin() {
 #${VAR%%pattern}    # delete longest match of pattern from the end
 
 function psql_exec_query_parse_args() {
-#  echo "psql_exec_query_parse_args, ARGS: $@"
   for v in "$@"; do
     case "$v" in
       q=*) qctx=${v#*=};; # query ctx
@@ -34,12 +47,16 @@ function psql_exec_query_parse_args() {
   fi
 }
 
-function psql_exec() {
-  psql_exec_parse_args "$@" || return 99
-  if [ "$mode" = "echo" ]; then
-    echo "${cmd}"
-  else
-    dt_exec "${cmd}"
+function psql_exec_parse_args() {
+  for v in "$@"; do
+    case "$v" in
+      cmd=*) cmd=${v#*=};;
+      m=*) mode=${v#*=};;
+      *) echo "${RED}[dtools][ERROR][function $0] unexpected parameter $v.${RESET}"; return 99;;
+    esac
+  done
+  if [ -z "${cmd}" ]; then
+    echo "${RED}[dtools][ERROR][function $0] cmd is empty cmd='$cmd'.${RESET}"; return 99
   fi
 }
 
@@ -53,6 +70,15 @@ function psql_conn_parse_args() {
   done
   if [ -z "${ctx}" ]; then
     echo "${RED}[dtools][ERROR][function $0] ctx is empty ctx='ctx'.${RESET}"; return 99
+  fi
+}
+
+function psql_exec() {
+  psql_exec_parse_args "$@" || return 99
+  if [ "$mode" = "echo" ]; then
+    echo "${cmd}"
+  else
+    dt_exec "${cmd}"
   fi
 }
 
@@ -72,42 +98,11 @@ function psql_conn() {
 }
 
 function psql_exec_query() {
-  echo "psql_exec_query, ARGS: $@"
   psql_exec_query_parse_args "$@" || return 99
-  echo "psql_exec_query, PARSED, qctx=$qctx"
   query="$($qtmpl $qctx || return 99)" || return $?
-  echo ">>>> psql_exec_query, query=${query}"
   conn="$(psql_conn ctx=$cctx m=echo)"
-  echo ">>>> psql_exec_query, conn=${conn}"
   cmd="echo $'${query}' '\gexec' | ${conn}"
   psql_exec cmd="$cmd" m=$mode
-}
-
-function psql_exec_parse_args() {
-  for v in "$@"; do
-    case "$v" in
-      cmd=*) cmd=${v#*=};;
-      m=*) mode=${v#*=};;
-      *) echo "${RED}[dtools][ERROR][function $0] unexpected parameter $v.${RESET}"; return 99;;
-    esac
-  done
-  if [ -z "${cmd}" ]; then
-    echo "${RED}[dtools][ERROR][function $0] cmd is empty cmd='$cmd'.${RESET}"; return 99
-  fi
-}
-
-function psql_conn_local_admin() {
-  cmd=$(
-    ctx_psql_conn_admin || return $?
-    unset PGHOST
-    sudo -u ${PGUSER} psql -d ${PGDATABASE}
-  )
-  psql_exec cmd="$cmd" m=$mode
-}
-
-# "psql_conn_admin" can be run in any context, but it will always rewrite PGUSER and PGPASSWORD to pg_user_admin's values
-function psql_conn_admin() {
-  psql_conn ctx=admin
 }
 
 function psql_cmd() {
@@ -139,4 +134,3 @@ function psql_cmd() {
 #    echo "Ok"
 #  )
 #}
-
