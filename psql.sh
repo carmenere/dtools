@@ -1,5 +1,3 @@
-psql_ctx_prefixes=(ctx_psql_conn pg_db)
-
 function ctx_psql_conn_admin() {
   ctx_pg
   pg_db_postgres
@@ -47,47 +45,9 @@ function psql_exec_query_parse_args() {
   fi
 }
 
-function psql_exec_parse_args() {
-  ERR=""
-  for v in "$@"; do
-    case "$v" in
-      cmd=*) cmd=${v#*=};;
-      m=*) mode=${v#*=};;
-      *) >&2 echo "$(dt_err $0) unexpected parameter $v."; return 99;;
-    esac
-  done
-  if [ -z "${cmd}" ]; then
-    >&2 echo "$(dt_err $0) cmd is empty cmd='$cmd'."; return 99
-  fi
-}
-
-function psql_conn_parse_args() {
-  for v in "$@"; do
-    case "$v" in
-      ctx=*) ctx=${v#*=};; # conn ctx
-      m=*) mode=${v#*=};;
-      *) >&2 echo "$(dt_err $0) unexpected parameter $v."; return 99;;
-    esac
-  done
-  if [ -z "${ctx}" ]; then
-    >&2 echo "$(dt_err $0) ctx is empty ctx='ctx'."; return 99
-  fi
-}
-
-function psql_exec() {
-  psql_exec_parse_args "$@"
-  if [ "$mode" = "echo" ]; then
-    echo "${cmd}"
-  else
-    dt_exec "${cmd}"
-  fi
-}
-
 function psql_conn() {
   (
-    psql_conn_parse_args "$@"
-    ctx=$(dt_lookup_ctx "$ctx" "${psql_ctx_prefixes[@]}")
-    # If ctx was passed - call it, or skip. If ctx doesn't exist - return
+    dt_parse_cmd_args "$@"
     $ctx
     cmd=("$(dt_inline_envs)")
     cmd+=("${PG_DIR}/psql")
@@ -105,12 +65,8 @@ function psql_exec_query() {
 
 function psql_cmd() {
   psql_exec_query_parse_args "$@"
-  cctx=$(dt_lookup_ctx "${cctx}" "${psql_ctx_prefixes[@]}")
-  qctx=$(dt_lookup_ctx "${qctx}" "${psql_ctx_prefixes[@]}")
   psql_exec_query "q=$qctx" "c=$cctx" "t=$qtmpl" "m=$mode"
 }
-
-
 
 #function psql_dump_db() {
 #  checks "$@" || return $?

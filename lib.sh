@@ -119,6 +119,7 @@ function dt_paths() {
   if [ -z "${DT_DTOOLS}" ]; then DT_DTOOLS="$(pwd)"; fi
 
   # Paths that depend on DT_DTOOLS
+  DT_PROJECT="${DT_DTOOLS}"/..
   DT_ARTEFACTS="${DT_DTOOLS}/.artefacts"
   DT_CORE=${DT_DTOOLS}/core
   DT_LOCALS=${DT_DTOOLS}/locals
@@ -129,6 +130,36 @@ function dt_paths() {
   DT_LOGS="${DT_ARTEFACTS}/.logs"
 }
 
+function dt_exec_or_echo_parse_args() {
+  for v in "$@"; do
+    case "$v" in
+      cmd=*) cmd=${v#*=};;
+      m=*) mode=${v#*=};;
+      *) >&2 echo "$(dt_err $0) unexpected parameter $v."; return 99;;
+    esac
+  done
+  if [ -z "${cmd}" ]; then
+    >&2 echo "$(dt_err $0) cmd is empty cmd='$cmd'."; return 99
+  fi
+}
+
+function dt_exec_or_echo() {
+  dt_exec_or_echo_parse_args "$@"
+  if [ "$mode" = "echo" ]; then
+    echo "${cmd}"
+  else
+    dt_exec "${cmd}"
+  fi
+}
+
+function dt_parse_cmd_args() {
+  ctx="$1"
+  mode="$2"
+  if [ -z "${ctx}" ]; then
+    >&2 echo "$(dt_err $0) ctx is empty ctx='ctx'."; return 99
+  fi
+}
+
 function dt_rc() {
   dt_paths
   . "${DT_CORE}/rc.sh"
@@ -136,3 +167,4 @@ function dt_rc() {
   . "${DT_STANDS}/rc.sh"
   . "${DT_TOOLS}/rc.sh"
 }
+

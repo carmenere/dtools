@@ -40,7 +40,7 @@ function rustup_component_add() {
 }
 
 function ctx_rustup() {
-  RUSTUP_TOOLCHAIN="1.99.0"
+  RUSTUP_TOOLCHAIN="1.86.0"
   RUSTUP_TARGET_TRIPLE=$(rust_target_triple)
   RUSTUP_COMPONENTS="clippy rustfmt"
   NIGHTLY_VERSION="nightly-2025-05-01"

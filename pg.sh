@@ -1,5 +1,3 @@
-pg_ctx_prefixes=(ctx_pg)
-
 function pg_add_path() {
   $(echo ${PATH} | grep -E -s "^$(pg_dir)" 1>/dev/null 2>&1)
   if [ $? != 0 ] && [ -n "$(pg_dir)" ]; then
