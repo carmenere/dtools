@@ -1,3 +1,5 @@
+pg_ctx_prefixes=(ctx_pg)
+
 function pg_add_path() {
   $(echo ${PATH} | grep -E -s "^$(pg_dir)" 1>/dev/null 2>&1)
   if [ $? != 0 ] && [ -n "$(pg_dir)" ]; then
@@ -113,7 +115,6 @@ function ctx_pg() {
   PGHOST="localhost"
   PGPORT=5432
   PG_CONF=$(pg_conf)
-  PG_DIR=$(pg_dir)
   PG_HBA=$(pg_hba)
   PG_MAJOR=17
   PG_MINOR=4
@@ -122,6 +123,7 @@ function ctx_pg() {
   # Depends on PG_MAJOR
   pg_add_path
   PG_VERSION="${PG_MAJOR}.${PG_MINOR}"
+  PG_DIR=$(pg_dir)
 
   # Depends on PATH
   PG_CONFIG_LIBDIR="$(pg_config --pkglibdir | tr ' ' '\n')"

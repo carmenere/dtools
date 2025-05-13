@@ -1,14 +1,14 @@
-psql_prefs=(ctx_psql_conn pg_db)
+psql_ctx_prefixes=(ctx_psql_conn pg_db)
 
 function ctx_psql_conn_admin() {
-  ctx_pg_tetrix
+  ctx_pg
   pg_db_postgres
   pg_user_admin
 }
 
 function psql_conn_local_admin() {
   cmd=$(
-    ctx_psql_conn_admin || return $?
+    ctx_psql_conn_admin
     unset PGHOST
     sudo -u ${PGUSER} psql -d ${PGDATABASE}
   )
@@ -29,34 +29,35 @@ function psql_conn_admin() {
 function psql_exec_query_parse_args() {
   for v in "$@"; do
     case "$v" in
-      q=*) qctx=${v#*=};; # query ctx
-      c=*) cctx=${v#*=};; # conn ctx
-      t=*) qtmpl=${v#*=};; # query template
+      q=*) qctx=${v#*=};; # MANDATORY: query ctx
+      c=*) cctx=${v#*=};; # MANDATORY: connection ctx,
+      t=*) qtmpl=${v#*=};; # MANDATORY: query template
       m=*) mode=${v#*=};;
-      *) echo "${RED}[dtools][ERROR][function $0] unexpected parameter $v.${RESET}"; return 99;;
+      *) >&2 echo "$(dt_err $0) unexpected parameter $v."; return 99;;
     esac
   done
   if [ -z "${qctx}" ]; then
-    echo "${RED}[dtools][ERROR][function $0] query ctx is empty: qctx='${qctx}'.${RESET}"; return 99
+    >&2 echo "$(dt_err $0) query ctx is empty: qctx='${qctx}'."; return 99
   fi
   if [ -z "${cctx}" ]; then
-    echo "${RED}[dtools][ERROR][function $0] connection ctx is empty: cctx='${cctx}'.${RESET}"; return 99
+    >&2 echo "$(dt_err $0) connection ctx is empty: cctx='${cctx}'."; return 99
   fi
   if [ -z "${qtmpl}" ]; then
-    echo "${RED}[dtools][ERROR][function $0] query template is empty: qtmpl='${qtmpl}'.${RESET}"; return 99
+    >&2 echo "$(dt_err $0) query template is empty: qtmpl='${qtmpl}'."; return 99
   fi
 }
 
 function psql_exec_parse_args() {
+  ERR=""
   for v in "$@"; do
     case "$v" in
       cmd=*) cmd=${v#*=};;
       m=*) mode=${v#*=};;
-      *) echo "${RED}[dtools][ERROR][function $0] unexpected parameter $v.${RESET}"; return 99;;
+      *) >&2 echo "$(dt_err $0) unexpected parameter $v."; return 99;;
     esac
   done
   if [ -z "${cmd}" ]; then
-    echo "${RED}[dtools][ERROR][function $0] cmd is empty cmd='$cmd'.${RESET}"; return 99
+    >&2 echo "$(dt_err $0) cmd is empty cmd='$cmd'."; return 99
   fi
 }
 
@@ -65,16 +66,16 @@ function psql_conn_parse_args() {
     case "$v" in
       ctx=*) ctx=${v#*=};; # conn ctx
       m=*) mode=${v#*=};;
-      *) echo "${RED}[dtools][ERROR][function $0] unexpected parameter $v.${RESET}"; return 99;;
+      *) >&2 echo "$(dt_err $0) unexpected parameter $v."; return 99;;
     esac
   done
   if [ -z "${ctx}" ]; then
-    echo "${RED}[dtools][ERROR][function $0] ctx is empty ctx='ctx'.${RESET}"; return 99
+    >&2 echo "$(dt_err $0) ctx is empty ctx='ctx'."; return 99
   fi
 }
 
 function psql_exec() {
-  psql_exec_parse_args "$@" || return 99
+  psql_exec_parse_args "$@"
   if [ "$mode" = "echo" ]; then
     echo "${cmd}"
   else
@@ -84,33 +85,32 @@ function psql_exec() {
 
 function psql_conn() {
   (
-    # It possible to pass ctx to psql_conn explicitly or run psql_conn without args inside some ctx
-    if [ -n "$1" ]; then
-      psql_conn_parse_args "$@" || return 99
-    fi
-    ctx=$(dt_lookup_ctx "$ctx" "${psql_prefs[@]}" || return $?) || return 99
+    psql_conn_parse_args "$@"
+    ctx=$(dt_lookup_ctx "$ctx" "${psql_ctx_prefixes[@]}")
     # If ctx was passed - call it, or skip. If ctx doesn't exist - return
     $ctx
     cmd=("$(dt_inline_envs)")
-    cmd+=(psql)
+    cmd+=("${PG_DIR}/psql")
     psql_exec cmd="${cmd}" m=$mode
   )
 }
 
 function psql_exec_query() {
-  psql_exec_query_parse_args "$@" || return 99
-  query="$($qtmpl $qctx || return 99)" || return $?
+  psql_exec_query_parse_args "$@"
+  query="$($qtmpl $qctx)"
   conn="$(psql_conn ctx=$cctx m=echo)"
   cmd="echo $'${query}' '\gexec' | ${conn}"
   psql_exec cmd="$cmd" m=$mode
 }
 
 function psql_cmd() {
-  psql_exec_query_parse_args "$@" || return 99
-  if ! cctx=$(dt_lookup_ctx "${cctx}" "${psql_prefs[@]}" || return 99); then return $?; fi
-  if ! qctx=$(dt_lookup_ctx "${qctx}" "${psql_prefs[@]}" || return 99); then return $?; fi
+  psql_exec_query_parse_args "$@"
+  cctx=$(dt_lookup_ctx "${cctx}" "${psql_ctx_prefixes[@]}")
+  qctx=$(dt_lookup_ctx "${qctx}" "${psql_ctx_prefixes[@]}")
   psql_exec_query "q=$qctx" "c=$cctx" "t=$qtmpl" "m=$mode"
 }
+
+
 
 #function psql_dump_db() {
 #  checks "$@" || return $?

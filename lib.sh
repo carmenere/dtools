@@ -3,8 +3,8 @@
 #    for v in "$@"
 #    do
 #       case "$v" in
-#           name=*) name=${v/*=/};;
-#           age=*)  age=${v/*=/};;
+#           name=*) name=${v#*=};;
+#           age=*)  age=${v#*=};;
 #           *)    echo "Unexpected parameter $v."; return 99;;
 #       esac
 #    done
@@ -12,25 +12,37 @@
 #    echo "name= $name age= $age"
 #}
 
-function dt_target() {
-  if [ -n "$1" ]; then
-    echo "${BOLD}[dtools]${RESET} Targert: ${GREEN}${BOLD}$1${RESET}"
-    $1
+function dt_err() {
+  echo "${BOLD}[dtools]${RED}[ERROR]${RESET}[in function ${BOLD}$1${RESET}]"
+}
+
+# Example: dt_log_err $err $0
+# $0 contains name of caller function
+function exit_on_err() {
+  if [ "$1" != 0 ] ; then
+    echo "$2 exit_on_err"
+    return $1
   fi
+}
+
+function dt_target() {
+  if [ -z "$1" ]; then return 0; fi
+  echo "${BOLD}[dtools][targert] ${GREEN}$1${RESET}"
+  $1
 }
 
 function dt_exec() {
-  if [ -n "$1" ]; then
-    echo "${BOLD}[dtools]${RESET} Command: ${BOLD}${GRAY} $1 ${RESET}"
-    eval $1
-  fi
+  if [ -z "$1" ]; then return 0; fi
+  echo "${BOLD}[dtools][command]${RESET} ${YELLOW} $1 ${RESET}"
+  if ! eval "$1"; then echo "$(dt_err $0)"; return 99; fi
 }
 
-# ctx = context. It can be fully qualified (ctx_cargo, ctx_cargo_foo, ctx_cargo_build_foo) or short (default, foo)
+# "ctx" = context. It can be fully qualified (ctx_cargo, ctx_cargo_foo, ctx_cargo_build_foo) or short (default, foo)
 # The fully qualified has format "$prefix_$ctx"
 # Example: ( cargo_lookup_ctx ctx_cargo_foo )
 # Example: ( cargo_lookup_ctx foo )
 function dt_lookup_ctx() {
+  if [ -z "$1" ]; then return 0; fi
   local orig_ctx=$1
   shift
   local prefixes=("$@")
@@ -48,7 +60,7 @@ function dt_lookup_ctx() {
     fi
   done
 
-  echo "${RED}[dtools][ERROR][function $0] Cannot find ctx '${orig_ctx}' in prefixes '${prefixes}'.${RESET}"
+  >&2 echo "$(dt_err $0) Cannot find ctx '${orig_ctx}' in prefixes '${prefixes}'."
   return 99
 }
 
@@ -64,11 +76,7 @@ function dt_check_ctx() {
 
 # Example: ( ctx_cargo; dt_inline_envs )
 function dt_inline_envs() {
-#  ctx=$1
-#  dt_check_ctx "$ctx" || return $?
-#  _inline_envs=()
   envs=()
-#  $ctx || return $?
   for env in ${_inline_envs}; do
     if [ -z "$env" ]; then continue; fi
     val=$(dt_escape_single_quotes "$(eval echo "\$$env")")
@@ -79,11 +87,7 @@ function dt_inline_envs() {
 
 # Example: ( ctx_cargo; dt_export_envs; export )
 function dt_export_envs() {
-#  ctx=$1
-#  dt_check_ctx "$ctx" || return $?
-#  _envs=()
   envs=()
-#  $ctx || return $?
   for env in ${_envs}; do
     if [ -z "$env" ]; then continue; fi
     val=$(dt_escape_single_quotes "$(eval echo "\$$env")")
