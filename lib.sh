@@ -1,3 +1,17 @@
+# Example: passing named arguments to functions
+#function parse_args() {
+#    for v in "$@"
+#    do
+#       case "$v" in
+#           name=*) name=${v/*=/};;
+#           age=*)  age=${v/*=/};;
+#           *)    echo "Unexpected parameter $v."; return 99;;
+#       esac
+#    done
+#
+#    echo "name= $name age= $age"
+#}
+
 function dt_target() {
   if [ -n "$1" ]; then
     echo "${BOLD}[dtools]${RESET} Targert: ${GREEN}${BOLD}$1${RESET}"
@@ -12,63 +26,36 @@ function dt_exec() {
   fi
 }
 
-#function dt_envs_dump() {
-#  if [ "${DT_DEBUG}" = "yes" ]; then
-#     echo "${BOLD}[dtools]${RESET} Dump all envs: ${CYAN}${BOLD} ${@} ${RESET}"
-#     export
-#  fi
-#}
-#
-## $1 contains name of function that wraps set of variables, for example "psql_user_admin".
-#function dt_envs_export() {
-#  vars=$1
-#  if [ -z "$vars" ]; then echo "Parameter "vars" was not provided. Nothing to export."; return 0; fi
-#  set -a; $vars; set +a
-#}
-
-# ns = namespace for commands, for example cargo.
-# ctx = context, it can be fully qualified (ctx_cargo, ctx_cargo_foo, ctx_cargo_build_foo) or short (default, foo)
-# The fully qualified has format "ctx_$ns_$cmd_$ctx" or "ctx_$ns_$ctx"
+# ctx = context. It can be fully qualified (ctx_cargo, ctx_cargo_foo, ctx_cargo_build_foo) or short (default, foo)
+# The fully qualified has format "$prefix_$ctx"
 # Example: ( cargo_lookup_ctx ctx_cargo_foo )
 # Example: ( cargo_lookup_ctx foo )
-#function dt_lookup_ctx() {
-#  ctx=$1
-#  ns=$2
-#  cmd=$3
-#
-#  # check exact match with $ctx
-#  if dt_check_ctx "$ctx"; then
-#    echo "$ctx"
-#    return 0
-#  fi
-#
-#  # then consider $ctx is a last part of fully qualified ctx
-#  dt_check_ns "$ns" || return 99
-#  if [ -z "$cmd" ]; then
-#    if dt_check_ctx "ctx_$ns_$ctx"; then
-#      echo "ctx_$ns_$ctx"
-#      return 0
-#    else
-#      return 91
-#    fi
-#  else
-#    if dt_check_ctx "ctx_$ns_$cmd_$ctx"; then
-#      echo "ctx_$ns_$cmd_$ctx"
-#      return 0
-#    else
-#      return 99
-#    fi
-#  fi
-#}
+function dt_lookup_ctx() {
+  local orig_ctx=$1
+  shift
+  local prefixes=("$@")
 
-#function dt_check_ns() {
-#  if [ -z "$1" ]; then return 90; fi
-#}
+  if dt_check_ctx "${orig_ctx}"; then
+    echo "${orig_ctx}"
+    return 0
+  fi
+
+  for p in ${prefixes}; do
+    ctx="${p}_${orig_ctx}"
+    if dt_check_ctx "${ctx}"; then
+      echo "${ctx}"
+      return 0
+    fi
+  done
+
+  echo "${RED}[dtools][ERROR][function $0] Cannot find ctx '${orig_ctx}' in prefixes '${prefixes}'.${RESET}"
+  return 99
+}
 
 function dt_check_ctx() {
-  ctx=$1
+  ctx="$1"
   if [ -z "$ctx" ]; then return 90; fi
-  if declare -f $ctx > /dev/null; then
+  if declare -f "$ctx" > /dev/null; then
       return 0
   else
       return 99
@@ -85,7 +72,7 @@ function dt_inline_envs() {
   for env in ${_inline_envs}; do
     if [ -z "$env" ]; then continue; fi
     val=$(dt_escape_single_quotes "$(eval echo "\$$env")")
-    if [ -n "${val}" ]; then; envs+=("${env}=$'${val}'"); fi
+    if [ -n "${val}" ]; then envs+=("${env}=$'${val}'"); fi
   done
   echo "${envs}"
 }
@@ -100,7 +87,7 @@ function dt_export_envs() {
   for env in ${_envs}; do
     if [ -z "$env" ]; then continue; fi
     val=$(dt_escape_single_quotes "$(eval echo "\$$env")")
-    if [ -n "${val}" ]; then; envs+=("export ${env}=$'${val}';"); fi
+    if [ -n "${val}" ]; then envs+=("export ${env}=$'${val}';"); fi
   done
   echo "${envs}"
 }

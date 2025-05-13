@@ -51,6 +51,36 @@ function ctx_cargo() {
   PACKAGE=
   PROFILE=$(cargo_profile)
   RUSTFLAGS=''
+  frozen= #y|n
+
+#function cargo_flag_all_features() {
+#  FLAGS+=(--all-features)
+#}
+#
+#function cargo_flag_no_default_features() {
+#  FLAGS+=(--no-default-features)
+#}
+#
+#function cargo_flag_locked() {
+#  FLAGS+=(--locked)
+#}
+#
+#function cargo_flag_offline() {
+#  FLAGS+=(--offline)
+#}
+#
+#function cargo_flag_frozen() {
+#  FLAGS+=(--frozen)
+#}
+#
+#function cargo_flag_ignore_rust_version() {
+#  FLAGS+=(--ignore-rust-version)
+#}
+#
+#function cargo_flag_force() {
+#  FLAGS+=(--force)
+#}
+
 
   # BINS_DIR depends on CARGO_TARGET_DIR, CARGO_TARGET_DIR, BUILD_MODE
   BINS_DIR=
@@ -98,34 +128,6 @@ function cargo_bin_dir() {
     bin_dir="${bin_dir}/$(cargo_build_mode)"
   fi
   echo "${bin_dir}"
-}
-
-function cargo_flag_all_features() {
-  FLAGS+=(--all-features)
-}
-
-function cargo_flag_no_default_features() {
-  FLAGS+=(--no-default-features)
-}
-
-function cargo_flag_locked() {
-  FLAGS+=(--locked)
-}
-
-function cargo_flag_offline() {
-  FLAGS+=(--offline)
-}
-
-function cargo_flag_frozen() {
-  FLAGS+=(--frozen)
-}
-
-function cargo_flag_ignore_rust_version() {
-  FLAGS+=(--ignore-rust-version)
-}
-
-function cargo_flag_force() {
-  FLAGS+=(--force)
 }
 
 function cd_manifest_dir() {

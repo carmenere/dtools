@@ -1,6 +1,11 @@
 function pg_add_path() {
   $(echo ${PATH} | grep -E -s "^$(pg_dir)" 1>/dev/null 2>&1)
-  if [ $? != 0 ] && [ -n "$(pg_dir)" ]; then PATH="$(pg_dir):${PATH}"; fi
+  if [ $? != 0 ] && [ -n "$(pg_dir)" ]; then
+    # Cut all duplicates of $(pg_dir)
+    PATH="$(echo $PATH | sed -E -e ":label; s|(.*):$(pg_dir)(.*)|\1\2|g; t label;")"
+    # Prepend $(pg_dir)
+    PATH="$(pg_dir):${PATH}"
+  fi
 }
 
 function pg_hba() {
@@ -43,6 +48,21 @@ function pg_install() {
     echo "Unsupported OS: '$(os_kernel)'"; exit;
   fi
 }
+
+# sed branching - Example
+#echo "apple pie
+#apple tart
+#banana split" | sed '/apple/ { s/apple/peach/; t; s/pie/cobbler/; }'
+#Output:
+#peach cobbler
+#peach tart
+#banana split
+
+#First, we target lines containing “apple” with the /apple/ address.
+#Inside the curly braces {}, we make a series of commands to execute.
+#The s/apple/peach/ command replaces “apple” with “peach”.
+#The t command checks if the above substitution was successful. If it was, it branches to the end of the commands inside the curly braces, skipping the next command. If no substitution was done, it continues executing the subsequent commands.
+#The s/pie/cobbler/ command is only executed if the previous s/apple/peach/ substitution wasn’t done.
 
 #Check pattern
 #1) If host all all 0.0.0.0\/0 md5 presents in file - do nothing.
@@ -90,7 +110,6 @@ function pg_lsof() {
 }
 
 function ctx_pg() {
-  pg_add_path
   PGHOST="localhost"
   PGPORT=5432
   PG_CONF=$(pg_conf)
@@ -99,11 +118,14 @@ function ctx_pg() {
   PG_MAJOR=17
   PG_MINOR=4
   SERVICE=$(pg_service)
-  PG_CFG_LIBDIR="$(pg_config --pkglibdir | tr ' ' '\n')"
-  PG_CFG_SHAREDIR="$(pg_config --sharedir)"
 
-  # Depends on PG_MAJOR and PG_MINOR
+  # Depends on PG_MAJOR
+  pg_add_path
   PG_VERSION="${PG_MAJOR}.${PG_MINOR}"
+
+  # Depends on PATH
+  PG_CONFIG_LIBDIR="$(pg_config --pkglibdir | tr ' ' '\n')"
+  PG_CONFIG_SHAREDIR="$(pg_config --sharedir)"
 
   _envs=(PGHOST PGPORT)
   _inline_envs=(${_envs[@]})
