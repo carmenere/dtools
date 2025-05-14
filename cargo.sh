@@ -2,6 +2,38 @@ function cargo_cache_clean() {
   cargo cache -r all
 }
 
+# Example
+#function ctx_crate_sqlx() {
+#  CRATE_NAME="sqlx-cli"
+#  CRATE_VERSION="0.8.5"
+#  cargo_flag_locked
+#}
+
+function cargo_install() {
+  (
+    dt_check_ctx $@
+    $ctx; exit_on_err $0 $? || return $?
+    cmd=(cargo install)
+    if [ -z "${CRATE_NAME}" ]; then return 99; fi
+    if [ -n "${CRATE_VERSION}" ]; then cmd+=(--version "${CRATE_VERSION}"); fi
+    cargo_manifest_opts
+    cmd+=(${CRATE_NAME})
+    dt_exec_or_echo "${cmd}" $mode
+  )
+}
+
+function cargo_uninstall() {
+  (
+    dt_check_ctx $@
+    $ctx; exit_on_err $0 $? || return $?
+    cmd=(cargo uninstall)
+    if [ -z "${CRATE_NAME}" ]; then return 99; fi
+    cargo_manifest_opts
+    cmd+=(${CRATE_NAME})
+    dt_exec_or_echo "${cmd}" $mode
+  )
+}
+
 function cargo_profile() {
   profile="dev"
 
@@ -17,35 +49,6 @@ function cargo_build_mode() {
       mode="release"
   fi
   echo "${mode}"
-}
-
-# Example
-#function ctx_crate_sqlx() {
-#  CRATE_NAME="sqlx-cli"
-#  CRATE_VERSION="0.8.5"
-#  cargo_flag_locked
-#}
-
-function cargo_install() {
-  (
-    set -e
-    cmd=(cargo install)
-    if [ -z "${CRATE_NAME}" ]; then return 99; fi
-    if [ -n "${CRATE_VERSION}" ]; then cmd+=(--version "${CRATE_VERSION}"); fi
-    cargo_common_flags
-    cmd+=(${CRATE_NAME})
-    dt_exec_or_echo cmd="${cmd}" m=$mode
-  )
-}
-
-function cargo_uninstall() {
-  (
-    cmd=(cargo uninstall)
-    if [ -z "${CRATE_NAME}" ]; then return 99; fi
-    cargo_common_flags
-    cmd+=(${CRATE_NAME})
-    dt_exec_or_echo cmd="${cmd}" m=$mode
-  )
 }
 
 # BINS_DIR can be:
@@ -98,18 +101,21 @@ function cargo_target_selection() {
   done
 }
 
-function cargo_common_flags() {
+function cargo_manifest_opts() {
   if [ "${FROZEN}" = "y" ]; then cmd+=(--frozen); fi
   if [ "${LOCKED}" = "y" ]; then cmd+=(--locked); fi
   if [ "${OFFLINE}" = "y" ]; then cmd+=(--offline); fi
+  if [ "${FORCE}" = "y" ]; then cmd+=(--force); fi
+  if [ "${IGNORE_RUST_VERSION}" = "y" ]; then cmd+=(--ignore-rust-version); fi
+}
+
+function cargo_feature_selection() {
   if [ "${NO_DEFAULT_FEATURES}" = "y" ]; then cmd+=(--no-default-features); fi
   if [ "${ALL_FEATURES}" = "y" ]; then cmd+=(--all-features); fi
-  if [ "${IGNORE_RUST_VERSION}" = "y" ]; then cmd+=(--ignore-rust-version); fi
-  if [ "${FORCE}" = "y" ]; then cmd+=(--force); fi
+  if [ -n "${FEATURES}" ]; then cmd+=(--features "'${FEATURES}'"); fi
 }
 
 function cargo_common_opts() {
-  if [ -n "${FEATURES}" ]; then cmd+=(--features "'${FEATURES}'"); fi
   if [ -n "${MESSAGE_FORMAT}" ]; then cmd+=(--message-format "${MESSAGE_FORMAT}"); fi
   if [ -n "${PROFILE}" ]; then cmd+=(--profile "${PROFILE}"); fi
 }
@@ -125,7 +131,8 @@ function cargo_gen_cli() {
   cargo_pkg_selection
   cargo_workspace_opts
   cargo_target_selection
-  cargo_common_flags
+  cargo_feature_selection
+  cargo_manifest_opts
   cargo_common_opts
 }
 
@@ -136,18 +143,7 @@ function cargo_build() {
     cmd=("$(dt_inline_envs)")
     cmd+=(cargo build)
     cargo_gen_cli
-    dt_exec_or_echo cmd="${cmd}" m=$mode
-  )
-}
-
-function cargo_fmt() {
-  (
-    dt_check_ctx $@
-    $ctx; exit_on_err $0 $? || return $?
-    cmd=("$(dt_inline_envs)")
-    cmd+=(cargo fmt)
-    cargo_gen_cli
-    dt_exec_or_echo cmd="${cmd}" m=$mode
+    dt_exec_or_echo "${cmd}" $mode
   )
 }
 
@@ -159,9 +155,10 @@ function cargo_fmt() {
     cmd+=(cargo)
     if [ -n "${NIGHTLY_VERSION}" ]; then cmd+="+${NIGHTLY_VERSION}"; fi
     cmd+=(fmt)
-    cargo_gen_cli
+    cargo_pkg_selection
+    cargo_manifest_opts
     cmd+=(-- --check)
-    dt_exec_or_echo cmd="${cmd}" m=$mode
+    dt_exec_or_echo "${cmd}" $mode
   )
 }
 
@@ -173,8 +170,9 @@ function cargo_fmt_fix() {
     cmd+=(cargo)
     if [ -n "${NIGHTLY_VERSION}" ]; then cmd+="+${NIGHTLY_VERSION}"; fi
     cmd+=(fmt)
-    cargo_gen_cli
-    dt_exec_or_echo cmd="${cmd}" m=$mode
+    cargo_pkg_selection
+    cargo_manifest_opts
+    dt_exec_or_echo "${cmd}" $mode
   )
 }
 
@@ -185,7 +183,7 @@ function cargo_test() {
     cmd=("$(dt_inline_envs)")
     cmd+=(cargo test)
     cargo_gen_cli
-    dt_exec_or_echo cmd="${cmd}" m=$mode
+    dt_exec_or_echo "${cmd}" $mode
   )
 }
 
@@ -198,7 +196,7 @@ function cargo_clippy() {
     cmd+=(cargo clippy)
     cargo_gen_cli
     cargo_clippy_opts
-    dt_exec_or_echo cmd="${cmd}" m=$mode
+    dt_exec_or_echo "${cmd}" $mode
   )
 }
 
@@ -211,7 +209,7 @@ function cargo_clippy_fix() {
     cargo_gen_cli
     cmd+=(--fix --allow-staged)
     cargo_clippy_opts
-    dt_exec_or_echo cmd="${cmd}" m=$mode
+    dt_exec_or_echo "${cmd}" $mode
   )
 }
 
@@ -223,7 +221,7 @@ function cargo_doc() {
     cmd+=(cargo doc)
     cargo_gen_cli
     cmd+=(--no-deps --document-private-items)
-    dt_exec_or_echo cmd="${cmd}" m=$mode
+    dt_exec_or_echo "${cmd}" $mode
   )
 }
 
@@ -235,7 +233,7 @@ function cargo_doc_open() {
     cmd+=(cargo doc)
     cargo_gen_cli
     cmd+=(--no-deps --document-private-items --open)
-    dt_exec_or_echo cmd="${cmd}" m=$mode
+    dt_exec_or_echo "${cmd}" $mode
   )
 }
 
@@ -248,7 +246,7 @@ function cargo_clean() {
     if [ -n "${PACKAGE}" ]; then
       cmd+=(--package "${PACKAGE}")
     fi
-    dt_exec_or_echo cmd="${cmd}" m=$mode
+    dt_exec_or_echo "${cmd}" $mode
   )
 }
 
@@ -279,19 +277,18 @@ function ctx_cargo() {
   RUSTFLAGS=''
 
   # Flags, can be y or n
-  FROZEN=
-  LOCKED=
-  OFFLINE=
-  NO_DEFAULT_FEATURES=
   ALL_FEATURES=
-  IGNORE_RUST_VERSION=
   FORCE=
+  FROZEN=
+  IGNORE_RUST_VERSION=
+  LOCKED=
+  NO_DEFAULT_FEATURES=
+  OFFLINE=
 
   # BINS_DIR depends on CARGO_TARGET_DIR, CARGO_TARGET_DIR, BUILD_MODE
   BINS_DIR=$(cargo_bin_dir)
 
   _envs+=(CARGO_BUILD_TARGET CARGO_TARGET_DIR RUSTFLAGS)
-
   # by default inline all env
   _inline_envs=(${_envs[@]})
 }

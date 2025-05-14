@@ -14,38 +14,38 @@
 
 function dt_debug() {
   # $1 must contain info message
-  >&2 echo "${BOLD}[dtools]${MAGENTA}[DEBUG]${RESET} $1"
+  >&2 echo "${BOLD}${MAGENTA}[dtools][DEBUG]${RESET} $1"
 }
 
 function dt_info() {
   # $1 must contain info message
-  >&2 echo "${BOLD}[dtools]${GREEN}[INFO]${RESET} $1"
+  >&2 echo "${BOLD}${GREEN}[dtools][INFO]${RESET} $1"
 }
 
 function dt_error() {
   # $1: must contain $0 of caller
   # $2: must contain err message
-  >&2 echo "${BOLD}[dtools]${RED}[ERROR]${RESET}<in function ${BOLD}$1${RESET}> $2"
+  >&2 echo "${BOLD}${RED}[dtools][ERROR]${RESET}<in function ${BOLD}$1${RESET}> $2"
 }
 
-function dt_target() {
+function dt_run_target() {
   # $1 must contain $0 of caller
   if [ -z "$1" ]; then return 0; fi
-    >&2 echo "${BOLD}[dtools][targert] ${GREEN}$1${RESET}"
-  $1
+    >&2 echo "${BOLD}${GREEN}[dtools][INFO][target] ${GREEN}$1${RESET}"
+    $1
 }
 
 function dt_exec() {
   if [ -z "$1" ]; then return 0; fi
   if [ "$DT_EXEC_ECHO" = "y" ]; then
-    >&2 echo "${BOLD}[dtools][command]${RESET} ${DT_EXEC_COLOR} $1 ${RESET}."
+    >&2 echo "${BOLD}${DT_EXEC_COLOR}[dtools][ECHO]${RESET} ${DT_EXEC_COLOR} $1 ${RESET}"
   fi
   if ! eval "$1"; then >&2 echo "$(dt_error $0)"; return 99; fi
 }
 
 function dt_debug_args() {
   if [ "$DT_EXEC_DEBUG" = "y" ]; then
-    dt_debug "${BOLD}function${RESET}: $1, ${BOLD}args${RESET}: '$2'."
+    dt_debug "${BOLD}function${RESET}: $1, ${BOLD}args${RESET}: '$2'"
   fi
 }
 
@@ -144,7 +144,8 @@ function dt_rc_load() {
 
 function dt_check_cmd() {
   dt_debug_args "$0" "$*"
-  cmd="$1"; mode="$2"
+  cmd="$1"
+  mode="$2"
   if [ -z "${cmd}" ]; then
     dt_error $0 "cmd is empty cmd='${cmd}'."; return 99
   fi
@@ -152,7 +153,8 @@ function dt_check_cmd() {
 
 function dt_check_ctx() {
   dt_debug_args "$0" "$*"
-  ctx="$1"; mode="$2"
+  ctx="$1"
+  mode="$2"
   if [ -z "${ctx}" ]; then
     dt_error $0 "ctx is empty ctx='${ctx}'."; return 99
   fi
@@ -167,6 +169,18 @@ function dt_exec_or_echo() {
   fi
 }
 
+function dt_run_targets() {
+  if [ -z "$1" ]; then return 0; fi
+  targets=("$@")
+  for target in $@; do
+    dt_run_target $target
+  done
+}
+
+function dt_sleep_5() {
+  sleep 5
+}
+
 function dt_paths() {
   if [ -z "${DT_DTOOLS}" ]; then DT_DTOOLS="$(pwd)"; fi
 
@@ -175,8 +189,9 @@ function dt_paths() {
   export DT_ARTEFACTS="${DT_DTOOLS}/.artefacts"
   export DT_CORE=${DT_DTOOLS}/core
   export DT_LOCALS=${DT_DTOOLS}/locals
-  export DT_STANDS=${DT_DTOOLS}/stands
+  export DT_SCRIPTS=${DT_DTOOLS}/scripts
   export DT_TOOLS=${DT_DTOOLS}/tools
+  export DT_TESTS=${DT_DTOOLS}/tests
 
   # Paths that depend on DT_ARTEFACTS
   export DT_LOGS="${DT_ARTEFACTS}/.logs"
@@ -194,6 +209,7 @@ function dt_init() {
   dt_defaults
   . "${DT_CORE}/rc.sh"
   . "${DT_LOCALS}/rc.sh"
-  . "${DT_STANDS}/rc.sh"
+  . "${DT_SCRIPTS}/rc.sh"
   . "${DT_TOOLS}/rc.sh"
+  . "${DT_TESTS}/rc.sh"
 }

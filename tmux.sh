@@ -66,8 +66,6 @@ function tmux_start() {
   (
     dt_check_ctx $@; exit_on_err $0 $? || return $?
     $ctx; exit_on_err $0 $? || return $?
-    echo TMX_WINDOW_NAME=$TMX_WINDOW_NAME
-    echo TMX_DEFAULT_CMD=$TMX_DEFAULT_CMD
     tmux_new $ctx
     tmux_check_window_name || return $?
     tmux_check_start_cmd || return $?

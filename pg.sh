@@ -33,6 +33,8 @@ function pg_service() {
 }
 
 function pg_install() {
+  dt_check_ctx $@; exit_on_err $0 $? || return $?
+  $ctx; exit_on_err $0 $? || return $?
   if [ "$(os_name)" = "debian" ] || [ "$(os_name)" = "ubuntu" ]; then
       echo "deb http://apt.postgresql.org/pub/repos/apt ${OS_CODENAME}-pgdg main" | sudo tee /etc/apt/sources.list.d/pgdg.list
       sudo wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo apt-key add -
@@ -43,7 +45,7 @@ function pg_install() {
           libpq-dev
 
   elif [ "$(os_kernel)" = "Darwin" ]; then
-    brew install "${SERVICE}"
+    dt_exec "brew install \"${SERVICE}\""
   else
     echo "Unsupported OS: '$(os_kernel)'"; exit;
   fi

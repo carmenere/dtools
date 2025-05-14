@@ -11,7 +11,7 @@ function app_log_file() {
   fi
 }
 
-function app_start() {
+function console_start() {
   (
     dt_check_ctx $@; exit_on_err $0 $? || return $?
     $ctx; exit_on_err $0 $? || return $?
@@ -34,8 +34,17 @@ function app_start() {
   )
 }
 
-function app_kill() {
-  SIGNAL=$1
+function console_stop() {
+  dt_check_ctx $@; exit_on_err $0 $? || return $?
+  $ctx; exit_on_err $0 $? || return $?
+  if [ -z "${PKILL_PATTERN}" ]; then echo "Parameter PKILL_PATTERN was not provided. Skip." return 99; fi
+  echo "Sending signal 'KILL' to ${APP} ..."
+  ps -A -o pid,args | grep -v grep | grep "${PKILL_PATTERN}" | awk '{print $1}' | xargs -I {} kill -s 'KILL' {} || true
+  echo "done."
+}
+
+function console_send_signal() {
+  SIGNAL=$2
   if [ -z "${SIGNAL}" ]; then SIGNAL='KILL'; fi
   echo "Sending signal ${SIGNAL} to ${APP} ..."
   ps -A -o pid,args | grep -v grep | grep "${PKILL_PATTERN}" | awk '{print $1}' | xargs -I {} kill -s ${SIGNAL} {} || true
