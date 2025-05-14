@@ -28,25 +28,34 @@ DT_DTOOLS=$(dirname "$(realpath $0)")
 echo "Loading lib ... "
 . "${DT_DTOOLS}/core/lib.sh"
 
-dt_rc
+dt_init
 ```
 6. Create directories:
 ```bash
 mkdir locals
-mkdir stands
+mkdir scripts
+mkdir tests
 mkdir tools
 ```
 7. Add `**/locals/` to file `.gitignore`.
 8. Create `rc.sh` in each directory:
 ```bash
 touch locals/rc.sh
-touch stands/rc.sh
+touch scripts/rc.sh
+touch tests/rc.sh
 touch tools/rc.sh
 ```
-9. Add `dt_rc_load %dirname% $(dirname $(realpath "$0"))` to rc.sh file in appropriate directory `%dirname%`:
-- `dt_rc_load locals $(dirname $(realpath "$0"))` to file `locals/rc.sh`;
-- `dt_rc_load stands $(dirname $(realpath "$0"))` to file `stands/rc.sh`;
-- `dt_rc_load tools $(dirname $(realpath "$0"))` to file `tools/rc.sh`;
+9. Add the following code to **each** `rc.sh` file you have just created:
+```bash
+if [ -n "${BASH_SOURCE}" ]; then self="${BASH_SOURCE[0]}"; else self="$0"; fi
+dt_rc_load %DIRNAME% $(dirname $(realpath "$self"))
+```
+
+The placeholder `%DIRNAME%` corresponds to the appropriate directory:
+- `locals`
+- `scripts`
+- `tests`
+- `tools`
 
 <br>
 
@@ -56,20 +65,23 @@ project_root_dir
 ├── ...
 ├── dtools/
 │   ├── .gitignore
-│   ├── core/       # This directory is a git submodule to 'https://github.com/carmenere/dtools' project.
+│   ├── core/   # This directory is a git submodule to 'https://github.com/carmenere/dtools' project.
 │   │   ├── lib.sh
 │   │   ├── ...
 │   │   └── rc.sh
-│   ├── locals/    # Must be added to .gitignore (**/locals/). It is for overwriting project defaults in local devel environment.
+│   ├── locals/   # Must be added to .gitignore (**/locals/). It is for overwriting project defaults in local devel environment.
 │   │   ├── ...
 │   │   └── rc.sh
-│   ├── stands/
+│   ├── scripts/
+│   │   ├── ...
+│   │   └── rc.sh
+│   ├── tests/
 │   │   ├── ...
 │   │   └── rc.sh
 │   ├── tools/
 │   │   ├── ...
 │   │   └── rc.sh
-│   └── rc.sh       # Loads "${DT_DTOOLS}/core/lib.sh" and calls "dt_rc" function.
+│   └── rc.sh   # Loads "${DT_DTOOLS}/core/lib.sh" and calls "dt_init" function.
 ├── ...
 ```
 

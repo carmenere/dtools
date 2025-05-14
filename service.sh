@@ -7,11 +7,11 @@ function service() {
 }
 
 function service_stop() {
-  if [ -z "$1" ]; then echo "Service name was not provided."; return 99; fi
-  dt_cmd "$(service) stop $1"
+  if [ -z "${SERVICE}" ]; then echo "Service name was not provided."; return 99; fi
+  $(service) stop "${SERVICE}"
 }
 
 function service_start() {
-  if [ -z "$1" ]; then echo "Service name was not provided."; return 99; fi
-  dt_cmd "$(service) start $1"
+  if [ -z "${SERVICE}" ]; then echo "Service name was not provided."; return 99; fi
+  $(service) start "${SERVICE}"
 }

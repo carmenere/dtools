@@ -85,9 +85,3 @@ function git_build_version() {
     echo "unknown"
   fi
 }
-
-function git_envs() {
-  BUILD_VERSION="$(git_build_version)"
-}
-
-DT_EXPORTS+=(git_envs)

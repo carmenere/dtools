@@ -1,112 +1,81 @@
-
-
-function psql_history() {
-  if [ -z "${HIST_PROFILE}" ]; then return 0; fi
-
-  PSQL_HISTORY="${HIST_DIR}/psql_${HIST_PROFILE}"
+function ctx_psql_connn() {
+  _envs=(PGHOST PGPORT PGUSER PGDATABASE PGPASSWORD)
+  _inline_envs=(${_envs[@]})
 }
 
-function psql_db_postgres() {
-  PGDATABASE="postgres"
+function ctx_psql_conn_admin() {
+  ctx_psql_connn
+  ctx_pg
+  pg_db_postgres
+  pg_user_admin
 }
 
-function psql_user_admin() {
-  PGPASSWORD="postgres"
-  if [ "$(os_name)" = "macos" ]; then
-    PGUSER="${USER}"
-  else
-    PGUSER=postgres
-  fi
-  psql_db_postgres
-}
-
-function psql_user_default() {
-  psql_user_admin
-}
-
-function psql_db_default() {
-  psql_db_postgres
-}
-
-# If $1 is empty, by it will use psql_user_admin and psql_db_postgres.
-function psql_conn() {
-  user=$1
-  db=$2
-  (
-    if [ -z "$user" ]; then user=psql_user_default; fi
-    if [ -z "$db" ]; then db=psql_db_default; fi
-    dt_envs_export psql_user_$user
-    dt_envs_export psql_db_$db
-    psql
-  )
-}
-
-function psql_local_admin() {
-  (
-    psql_user_admin || return $?
+function psql_conn_local_admin() {
+  cmd=$(
+    ctx_psql_conn_admin
     unset PGHOST
     sudo -u ${PGUSER} psql -d ${PGDATABASE}
   )
+  dt_exec_or_echo "$cmd" $mode
 }
 
-# $1: username
-# In postgres the $$ ... $$ means dollar-quoted string.
-# So, we must escape each $ to avoid bash substitution: \$\$ ... \$\$.
-function psql_create_user() {
+# "psql_conn_admin" can be run in any context, but it will always rewrite PGUSER and PGPASSWORD to pg_user_admin's values
+function psql_conn_admin() {
+  psql_conn ctx_psql_conn_admin
+}
+
+# for example, pattern may be *=
+#${VAR#pattern}     # delete shortest match of pattern from the beginning
+#${VAR##pattern}    # delete longest match of pattern from the beginning
+#${VAR%pattern}     # delete shortest match of pattern from the end
+#${VAR%%pattern}    # delete longest match of pattern from the end
+
+function psql_cmd_parse_args() {
+  dt_debug_args "$0" "$*"
+  for v in $@; do
+    case "$v" in
+      q=*) qctx=${v#*=};; # MANDATORY: query ctx
+      c=*) cctx=${v#*=};; # MANDATORY: connection ctx,
+      t=*) qtmpl=${v#*=};; # MANDATORY: query template
+      m=*) mode=${v#*=};;
+      *) >&2 dt_error $0 "unexpected parameter $v."; return 99;;
+    esac
+  done
+  if [ -z "${qctx}" ]; then
+    >&2 dt_error $0 "query ctx is empty: qctx='${qctx}'."; return 99
+  fi
+  if [ -z "${cctx}" ]; then
+    >&2 dt_error $0 "connection ctx is empty: cctx='${cctx}'."; return 99
+  fi
+  if [ -z "${qtmpl}" ]; then
+    >&2 dt_error $0 "query template is empty: qtmpl='${qtmpl}'."; return 99
+  fi
+}
+
+function psql_conn() {
   (
-    psql_user_$1 || return $?
-    QUERY=$(dt_escape_single_quotes "
-      SELECT \$\$CREATE USER ${PGUSER} WITH ENCRYPTED PASSWORD '${PGPASSWORD}'\$\$
-      WHERE NOT EXISTS (SELECT true FROM pg_roles WHERE rolname = '${PGUSER}')
-    ")
-    dt_cmd "echo $'${QUERY}' '\gexec' | psql_conn admin postgres" | tr -s ' '
+    dt_check_ctx $@
+    $ctx
+    cmd=("$(dt_inline_envs)")
+    cmd+=("${PG_DIR}/psql")
+    dt_exec_or_echo "${cmd}" $mode
   )
 }
 
-# $1: username
-function psql_drop_user() {
-  (
-    psql_user_$1 || return $?
-    QUERY="DROP USER IF EXISTS ${PGUSER}"
-    dt_cmd "echo $'${QUERY}' '\gexec' | psql_conn admin postgres" | tr -s ' '
-  )
+function psql_gexec() {
+  psql_cmd_parse_args $@
+  query="$($qtmpl $qctx)"
+  conn="$(psql_conn $cctx echo)"
+  cmd="echo $'${query}' '\gexec' | ${conn}"
+  dt_exec_or_echo "$cmd" $mode
 }
 
-# $1: username
-function psql_create_db() {
-  (
-    psql_db_$1 || return $?
-    QUERY=$(dt_escape_single_quotes "
-      SELECT 'CREATE DATABASE ${PGDATABASE}'
-      WHERE NOT EXISTS (SELECT true FROM pg_database WHERE datname = '${PGDATABASE}')
-    ")
-    dt_cmd "echo $'${QUERY}' '\gexec' | psql_conn admin postgres" | tr -s ' '
-  )
-}
-
-# $1: username
-#
-function psql_drop_db() {
-  (
-    psql_db_$1 || return $?
-    QUERY=$(dt_escape_single_quotes "
-      SELECT 'DROP DATABASE IF EXISTS ${PGDATABASE}'
-      WHERE EXISTS (SELECT true FROM pg_database WHERE datname = '${PGDATABASE}')
-    ")
-    dt_cmd "echo $'${QUERY}' '\gexec' | psql_conn admin postgres" | tr -s ' '
-  )
-}
-
-function psql_alter_role_password() {
-  (
-    psql_user_$1 || return $?
-    QUERY="ALTER ROLE \"${PGUSER}\" WITH PASSWORD \'${PGPASSWORD}\'"
-    dt_cmd "echo $'${QUERY}' '\gexec' | psql_conn admin postgres" | tr -s ' '
-  )
-}
-
-function psql_alter_admin_password() {
-  psql_alter_role_password admin postgres
+function psql_cmd() {
+  psql_cmd_parse_args $@
+  query="$($qtmpl $qctx)"
+  conn="$(psql_conn $cctx echo)"
+  cmd="${conn} -c $'${query}'"
+  dt_exec_or_echo "$cmd" $mode
 }
 
 #function psql_dump_db() {
@@ -131,13 +100,3 @@ function psql_alter_admin_password() {
 #    echo "Ok"
 #  )
 #}
-
-
-
-function psql_envs() {
-  psql_user_migrator
-  psql_db_tetrix
-  psql_history
-}
-
-DT_EXPORTS+=(psql_envs)
