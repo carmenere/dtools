@@ -1,4 +1,10 @@
+function ctx_psql_connn() {
+  _envs=(PGHOST PGPORT PGUSER PGDATABASE PGPASSWORD)
+  _inline_envs=(${_envs[@]})
+}
+
 function ctx_psql_conn_admin() {
+  ctx_psql_connn
   ctx_pg
   pg_db_postgres
   pg_user_admin
@@ -10,12 +16,12 @@ function psql_conn_local_admin() {
     unset PGHOST
     sudo -u ${PGUSER} psql -d ${PGDATABASE}
   )
-  psql_exec cmd="$cmd" m=$mode
+  dt_exec_or_echo "$cmd" $mode
 }
 
 # "psql_conn_admin" can be run in any context, but it will always rewrite PGUSER and PGPASSWORD to pg_user_admin's values
 function psql_conn_admin() {
-  psql_conn ctx=admin
+  psql_conn ctx_psql_conn_admin
 }
 
 # for example, pattern may be *=
@@ -24,48 +30,52 @@ function psql_conn_admin() {
 #${VAR%pattern}     # delete shortest match of pattern from the end
 #${VAR%%pattern}    # delete longest match of pattern from the end
 
-function psql_exec_query_parse_args() {
-  for v in "$@"; do
+function psql_cmd_parse_args() {
+  dt_debug_args "$0" "$*"
+  for v in $@; do
     case "$v" in
       q=*) qctx=${v#*=};; # MANDATORY: query ctx
       c=*) cctx=${v#*=};; # MANDATORY: connection ctx,
       t=*) qtmpl=${v#*=};; # MANDATORY: query template
       m=*) mode=${v#*=};;
-      *) >&2 echo "$(dt_err $0) unexpected parameter $v."; return 99;;
+      *) >&2 dt_error $0 "unexpected parameter $v."; return 99;;
     esac
   done
   if [ -z "${qctx}" ]; then
-    >&2 echo "$(dt_err $0) query ctx is empty: qctx='${qctx}'."; return 99
+    >&2 dt_error $0 "query ctx is empty: qctx='${qctx}'."; return 99
   fi
   if [ -z "${cctx}" ]; then
-    >&2 echo "$(dt_err $0) connection ctx is empty: cctx='${cctx}'."; return 99
+    >&2 dt_error $0 "connection ctx is empty: cctx='${cctx}'."; return 99
   fi
   if [ -z "${qtmpl}" ]; then
-    >&2 echo "$(dt_err $0) query template is empty: qtmpl='${qtmpl}'."; return 99
+    >&2 dt_error $0 "query template is empty: qtmpl='${qtmpl}'."; return 99
   fi
 }
 
 function psql_conn() {
   (
-    dt_parse_cmd_args "$@"
+    dt_check_ctx $@
     $ctx
     cmd=("$(dt_inline_envs)")
     cmd+=("${PG_DIR}/psql")
-    psql_exec cmd="${cmd}" m=$mode
+    dt_exec_or_echo "${cmd}" $mode
   )
 }
 
-function psql_exec_query() {
-  psql_exec_query_parse_args "$@"
+function psql_gexec() {
+  psql_cmd_parse_args $@
   query="$($qtmpl $qctx)"
-  conn="$(psql_conn ctx=$cctx m=echo)"
+  conn="$(psql_conn $cctx echo)"
   cmd="echo $'${query}' '\gexec' | ${conn}"
-  psql_exec cmd="$cmd" m=$mode
+  dt_exec_or_echo "$cmd" $mode
 }
 
 function psql_cmd() {
-  psql_exec_query_parse_args "$@"
-  psql_exec_query "q=$qctx" "c=$cctx" "t=$qtmpl" "m=$mode"
+  psql_cmd_parse_args $@
+  query="$($qtmpl $qctx)"
+  conn="$(psql_conn $cctx echo)"
+  cmd="${conn} -c $'${query}'"
+  dt_exec_or_echo "$cmd" $mode
 }
 
 #function psql_dump_db() {

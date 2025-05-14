@@ -112,8 +112,7 @@ function pg_lsof() {
 function ctx_pg() {
   PGHOST="localhost"
   PGPORT=5432
-  PG_CONF=$(pg_conf)
-  PG_HBA=$(pg_hba)
+
   PG_MAJOR=17
   PG_MINOR=4
   SERVICE=$(pg_service)
@@ -123,12 +122,12 @@ function ctx_pg() {
   PG_VERSION="${PG_MAJOR}.${PG_MINOR}"
   PG_DIR=$(pg_dir)
 
+  # Depends on PG_DIR
+  PG_CONF=$(pg_conf)
+  PG_HBA=$(pg_hba)
   # Depends on PATH
   PG_CONFIG_LIBDIR="$(pg_config --pkglibdir | tr ' ' '\n')"
   PG_CONFIG_SHAREDIR="$(pg_config --sharedir)"
-
-  _envs=(PGHOST PGPORT)
-  _inline_envs=(${_envs[@]})
 }
 
 function pg_user_admin() {
@@ -138,14 +137,10 @@ function pg_user_admin() {
   else
     PGUSER=postgres
   fi
-  _envs+=(PGUSER PGPASSWORD)
-  _inline_envs=(${_envs[@]})
 }
 
 function pg_db_postgres() {
   PGDATABASE="postgres"
-  _envs+=(PGDATABASE)
-  _inline_envs=(${_envs[@]})
 }
 
 

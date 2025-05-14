@@ -12,29 +12,52 @@
 #    echo "name= $name age= $age"
 #}
 
-function dt_err() {
-  echo "${BOLD}[dtools]${RED}[ERROR]${RESET}[in function ${BOLD}$1${RESET}]"
+function dt_debug() {
+  # $1 must contain info message
+  >&2 echo "${BOLD}[dtools]${MAGENTA}[DEBUG]${RESET} $1"
 }
 
-# Example: dt_log_err $err $0
-# $0 contains name of caller function
-function exit_on_err() {
-  if [ "$1" != 0 ] ; then
-    echo "$2 exit_on_err"
-    return $1
-  fi
+function dt_info() {
+  # $1 must contain info message
+  >&2 echo "${BOLD}[dtools]${GREEN}[INFO]${RESET} $1"
+}
+
+function dt_error() {
+  # $1: must contain $0 of caller
+  # $2: must contain err message
+  >&2 echo "${BOLD}[dtools]${RED}[ERROR]${RESET}<in function ${BOLD}$1${RESET}> $2"
 }
 
 function dt_target() {
+  # $1 must contain $0 of caller
   if [ -z "$1" ]; then return 0; fi
-  echo "${BOLD}[dtools][targert] ${GREEN}$1${RESET}"
+    >&2 echo "${BOLD}[dtools][targert] ${GREEN}$1${RESET}"
   $1
 }
 
 function dt_exec() {
   if [ -z "$1" ]; then return 0; fi
-  echo "${BOLD}[dtools][command]${RESET} ${YELLOW} $1 ${RESET}"
-  if ! eval "$1"; then echo "$(dt_err $0)"; return 99; fi
+  if [ "$DT_EXEC_ECHO" = "y" ]; then
+    >&2 echo "${BOLD}[dtools][command]${RESET} ${DT_EXEC_COLOR} $1 ${RESET}."
+  fi
+  if ! eval "$1"; then >&2 echo "$(dt_error $0)"; return 99; fi
+}
+
+function dt_debug_args() {
+  if [ "$DT_EXEC_DEBUG" = "y" ]; then
+    dt_debug "${BOLD}function${RESET}: $1, ${BOLD}args${RESET}: '$2'."
+  fi
+}
+
+# Example: exit_on_err $0 $err_code
+# $0 contains name of caller function
+function exit_on_err() {
+  # $1: must contain $0 of caller
+  # $2: error code
+  if [ "$2" != 0 ] ; then
+    dt_error $1 $0
+    return $2
+  fi
 }
 
 # "ctx" = context. It can be fully qualified (ctx_cargo, ctx_cargo_foo, ctx_cargo_build_foo) or short (default, foo)
@@ -60,11 +83,12 @@ function dt_lookup_ctx() {
     fi
   done
 
-  >&2 echo "$(dt_err $0) Cannot find ctx '${orig_ctx}' in prefixes '${prefixes}'."
+  dt_error $0 "Cannot find ctx '${orig_ctx}' in prefixes '${prefixes}'."
   return 99
 }
 
 function dt_check_ctx() {
+  dt_debug_args "$0" "$*"
   ctx="$1"
   if [ -z "$ctx" ]; then return 90; fi
   if declare -f "$ctx" > /dev/null; then
@@ -76,6 +100,7 @@ function dt_check_ctx() {
 
 # Example: ( ctx_cargo; dt_inline_envs )
 function dt_inline_envs() {
+  dt_debug_args "$0" "$*"
   envs=()
   for env in ${_inline_envs}; do
     if [ -z "$env" ]; then continue; fi
@@ -87,6 +112,7 @@ function dt_inline_envs() {
 
 # Example: ( ctx_cargo; dt_export_envs; export )
 function dt_export_envs() {
+  dt_debug_args "$0" "$*"
   envs=()
   for env in ${_envs}; do
     if [ -z "$env" ]; then continue; fi
@@ -101,6 +127,7 @@ function dt_escape_single_quotes() {
 }
 
 function dt_rc_load() {
+  dt_debug_args "$0" "$*"
   description=$1
   dir=$2
   if [ -z "${description}" ]; then return 99; fi
@@ -115,36 +142,24 @@ function dt_rc_load() {
   done
 }
 
-function dt_paths() {
-  if [ -z "${DT_DTOOLS}" ]; then DT_DTOOLS="$(pwd)"; fi
-
-  # Paths that depend on DT_DTOOLS
-  DT_PROJECT="${DT_DTOOLS}"/..
-  DT_ARTEFACTS="${DT_DTOOLS}/.artefacts"
-  DT_CORE=${DT_DTOOLS}/core
-  DT_LOCALS=${DT_DTOOLS}/locals
-  DT_STANDS=${DT_DTOOLS}/stands
-  DT_TOOLS=${DT_DTOOLS}/tools
-
-  # Paths that depend on DT_ARTEFACTS
-  DT_LOGS="${DT_ARTEFACTS}/.logs"
+function dt_check_cmd() {
+  dt_debug_args "$0" "$*"
+  cmd="$1"; mode="$2"
+  if [ -z "${cmd}" ]; then
+    dt_error $0 "cmd is empty cmd='${cmd}'."; return 99
+  fi
 }
 
-function dt_exec_or_echo_parse_args() {
-  for v in "$@"; do
-    case "$v" in
-      cmd=*) cmd=${v#*=};;
-      m=*) mode=${v#*=};;
-      *) >&2 echo "$(dt_err $0) unexpected parameter $v."; return 99;;
-    esac
-  done
-  if [ -z "${cmd}" ]; then
-    >&2 echo "$(dt_err $0) cmd is empty cmd='$cmd'."; return 99
+function dt_check_ctx() {
+  dt_debug_args "$0" "$*"
+  ctx="$1"; mode="$2"
+  if [ -z "${ctx}" ]; then
+    dt_error $0 "ctx is empty ctx='${ctx}'."; return 99
   fi
 }
 
 function dt_exec_or_echo() {
-  dt_exec_or_echo_parse_args "$@"
+  dt_check_cmd $@
   if [ "$mode" = "echo" ]; then
     echo "${cmd}"
   else
@@ -152,19 +167,33 @@ function dt_exec_or_echo() {
   fi
 }
 
-function dt_parse_cmd_args() {
-  ctx="$1"
-  mode="$2"
-  if [ -z "${ctx}" ]; then
-    >&2 echo "$(dt_err $0) ctx is empty ctx='ctx'."; return 99
-  fi
+function dt_paths() {
+  if [ -z "${DT_DTOOLS}" ]; then DT_DTOOLS="$(pwd)"; fi
+
+  # Paths that depend on DT_DTOOLS
+  export DT_PROJECT="${DT_DTOOLS}"/..
+  export DT_ARTEFACTS="${DT_DTOOLS}/.artefacts"
+  export DT_CORE=${DT_DTOOLS}/core
+  export DT_LOCALS=${DT_DTOOLS}/locals
+  export DT_STANDS=${DT_DTOOLS}/stands
+  export DT_TOOLS=${DT_DTOOLS}/tools
+
+  # Paths that depend on DT_ARTEFACTS
+  export DT_LOGS="${DT_ARTEFACTS}/.logs"
 }
 
-function dt_rc() {
+function dt_defaults() {
   dt_paths
+  export DT_PROFILES=("dev")
+  export DT_EXEC_ECHO="y"
+  export DT_EXEC_COLOR="${YELLOW}"
+  export DT_EXEC_DEBUG="y"
+}
+
+function dt_init() {
+  dt_defaults
   . "${DT_CORE}/rc.sh"
   . "${DT_LOCALS}/rc.sh"
   . "${DT_STANDS}/rc.sh"
   . "${DT_TOOLS}/rc.sh"
 }
-

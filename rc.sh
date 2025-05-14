@@ -1,9 +1,4 @@
-
-# Sdpecial vars
-export DT_PROFILES=("dev")
-#export DT_DEBUG=yes
-export DT_DEBUG=
+if [ -n "${BASH_SOURCE}" ]; then self="${BASH_SOURCE[0]}"; else self="$0"; fi
 
 # The "lib.sh" must be loaded before!
-dt_rc_load core $(dirname $(realpath "$0"))
-
+dt_rc_load tools $(dirname $(realpath "$self"))

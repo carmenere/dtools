@@ -28,6 +28,7 @@ function cargo_build_mode() {
 
 function cargo_install() {
   (
+    set -e
     cmd=(cargo install)
     if [ -z "${CRATE_NAME}" ]; then return 99; fi
     if [ -n "${CRATE_VERSION}" ]; then cmd+=(--version "${CRATE_VERSION}"); fi
@@ -130,8 +131,8 @@ function cargo_gen_cli() {
 
 function cargo_build() {
   (
-    dt_parse_cmd_args "$@"; exit_on_err $? "$(dt_err $0)" || return $?
-    $ctx; exit_on_err $? "$(dt_err $0)" || return $?
+    dt_check_ctx $@
+    $ctx; exit_on_err $0 $? || return $?
     cmd=("$(dt_inline_envs)")
     cmd+=(cargo build)
     cargo_gen_cli
@@ -141,8 +142,8 @@ function cargo_build() {
 
 function cargo_fmt() {
   (
-    dt_parse_cmd_args "$@"; exit_on_err $? "$(dt_err $0)" || return $?
-    $ctx; exit_on_err $? "$(dt_err $0)" || return $?
+    dt_check_ctx $@
+    $ctx; exit_on_err $0 $? || return $?
     cmd=("$(dt_inline_envs)")
     cmd+=(cargo fmt)
     cargo_gen_cli
@@ -152,8 +153,8 @@ function cargo_fmt() {
 
 function cargo_fmt() {
   (
-    dt_parse_cmd_args "$@"; exit_on_err $? "$(dt_err $0)" || return $?
-    $ctx; exit_on_err $? "$(dt_err $0)" || return $?
+    dt_check_ctx $@
+    $ctx; exit_on_err $0 $? || return $?
     cmd=("$(dt_inline_envs)")
     cmd+=(cargo)
     if [ -n "${NIGHTLY_VERSION}" ]; then cmd+="+${NIGHTLY_VERSION}"; fi
@@ -166,8 +167,8 @@ function cargo_fmt() {
 
 function cargo_fmt_fix() {
   (
-    dt_parse_cmd_args "$@"; exit_on_err $? "$(dt_err $0)" || return $?
-    $ctx; exit_on_err $? "$(dt_err $0)" || return $?
+    dt_check_ctx $@
+    $ctx; exit_on_err $0 $? || return $?
     cmd=("$(dt_inline_envs)")
     cmd+=(cargo)
     if [ -n "${NIGHTLY_VERSION}" ]; then cmd+="+${NIGHTLY_VERSION}"; fi
@@ -179,8 +180,8 @@ function cargo_fmt_fix() {
 
 function cargo_test() {
   (
-    dt_parse_cmd_args "$@"; exit_on_err $? "$(dt_err $0)" || return $?
-    $ctx; exit_on_err $? "$(dt_err $0)" || return $?
+    dt_check_ctx $@
+    $ctx; exit_on_err $0 $? || return $?
     cmd=("$(dt_inline_envs)")
     cmd+=(cargo test)
     cargo_gen_cli
@@ -191,8 +192,8 @@ function cargo_test() {
 # "cargo clippy" uses "cargo check" under the hood.
 function cargo_clippy() {
   (
-    dt_parse_cmd_args "$@"; exit_on_err $? "$(dt_err $0)" || return $?
-    $ctx; exit_on_err $? "$(dt_err $0)" || return $?
+    dt_check_ctx $@
+    $ctx; exit_on_err $0 $? || return $?
     cmd=("$(dt_inline_envs)")
     cmd+=(cargo clippy)
     cargo_gen_cli
@@ -203,8 +204,8 @@ function cargo_clippy() {
 
 function cargo_clippy_fix() {
   (
-    dt_parse_cmd_args "$@"; exit_on_err $? "$(dt_err $0)" || return $?
-    $ctx; exit_on_err $? "$(dt_err $0)" || return $?
+    dt_check_ctx $@
+    $ctx; exit_on_err $0 $? || return $?
     cmd=("$(dt_inline_envs)")
     cmd+=(cargo clippy)
     cargo_gen_cli
@@ -216,8 +217,8 @@ function cargo_clippy_fix() {
 
 function cargo_doc() {
   (
-    dt_parse_cmd_args "$@"; exit_on_err $? "$(dt_err $0)" || return $?
-    $ctx; exit_on_err $? "$(dt_err $0)" || return $?
+    dt_check_ctx $@
+    $ctx; exit_on_err $0 $? || return $?
     cmd=("$(dt_inline_envs)")
     cmd+=(cargo doc)
     cargo_gen_cli
@@ -228,8 +229,8 @@ function cargo_doc() {
 
 function cargo_doc_open() {
   (
-    dt_parse_cmd_args "$@"; exit_on_err $? "$(dt_err $0)" || return $?
-    $ctx; exit_on_err $? "$(dt_err $0)" || return $?
+    dt_check_ctx $@
+    $ctx; exit_on_err $0 $? || return $?
     cmd=("$(dt_inline_envs)")
     cmd+=(cargo doc)
     cargo_gen_cli
@@ -240,8 +241,8 @@ function cargo_doc_open() {
 
 function cargo_clean() {
   (
-    dt_parse_cmd_args "$@"; exit_on_err $? "$(dt_err $0)" || return $?
-    $ctx; exit_on_err $? "$(dt_err $0)" || return $?
+    dt_check_ctx $@
+    $ctx; exit_on_err $0 $? || return $?
     cmd=("$(dt_inline_envs)")
     cmd+=(cargo clean)
     if [ -n "${PACKAGE}" ]; then

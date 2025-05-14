@@ -25,8 +25,8 @@ function tmux_check_start_cmd() {
 
 function tmux_new() {
   (
-    dt_parse_cmd_args "$@"; exit_on_err $? "$(dt_err $0)" || return $?
-    $ctx; exit_on_err $? "$(dt_err $0)" || return $?
+    dt_check_ctx $@; exit_on_err $0 $? || return $?
+    $ctx; exit_on_err $0 $? || return $?
     tmux_check_session || return $?
     tmux has-session -t ${TMX_SESSION} || tmux new -s ${TMX_SESSION} -d
     tmux has-session -t ${TMX_SESSION} && \
@@ -42,8 +42,8 @@ function tmux_new() {
 
 function tmux_close() {
   (
-    dt_parse_cmd_args "$@"; exit_on_err $? "$(dt_err $0)" || return $?
-    $ctx; exit_on_err $? "$(dt_err $0)" || return $?
+    dt_check_ctx $@; exit_on_err $0 $? || return $?
+    $ctx; exit_on_err $0 $? || return $?
     tmux_check_session || return $?
     tmux has-session -t ${TMX_SESSION} && tmux kill-session -t ${TMX_SESSION} || echo "Session ${TMX_SESSION} was not opened."
   )
@@ -51,8 +51,8 @@ function tmux_close() {
 
 function tmux_start_sync() {
   (
-    dt_parse_cmd_args "$@"; exit_on_err $? "$(dt_err $0)" || return $?
-    $ctx; exit_on_err $? "$(dt_err $0)" || return $?
+    dt_check_ctx $@; exit_on_err $0 $? || return $?
+    $ctx; exit_on_err $0 $? || return $?
     tmux_new $ctx
     tmux_check_window_name || return $?
     tmux_check_start_cmd || return $?
@@ -64,8 +64,8 @@ function tmux_start_sync() {
 
 function tmux_start() {
   (
-    dt_parse_cmd_args "$@"; exit_on_err $? "$(dt_err $0)" || return $?
-    $ctx; exit_on_err $? "$(dt_err $0)" || return $?
+    dt_check_ctx $@; exit_on_err $0 $? || return $?
+    $ctx; exit_on_err $0 $? || return $?
     echo TMX_WINDOW_NAME=$TMX_WINDOW_NAME
     echo TMX_DEFAULT_CMD=$TMX_DEFAULT_CMD
     tmux_new $ctx
@@ -78,8 +78,8 @@ function tmux_start() {
 
 function tmux_stop() {
   (
-    dt_parse_cmd_args "$@"; exit_on_err $? "$(dt_err $0)" || return $?
-    $ctx; exit_on_err $? "$(dt_err $0)" || return $?
+    dt_check_ctx $@; exit_on_err $0 $? || return $?
+    $ctx; exit_on_err $0 $? || return $?
     tmux_check_session || return $?
     tmux_check_window_name || return $?
     tmux has-session -t ${TMX_SESSION} && tmux kill-window -t ${TMX_SESSION}:${TMX_WINDOW_NAME} || echo "Window ${TMX_SESSION}:${TMX_WINDOW_NAME} was not opened."
@@ -92,8 +92,8 @@ function tmux_kill() {
 
 function tmux_connect() {
   (
-    dt_parse_cmd_args "$@"; exit_on_err $? "$(dt_err $0)" || return $?
-    $ctx; exit_on_err $? "$(dt_err $0)" || return $?
+    dt_check_ctx $@; exit_on_err $0 $? || return $?
+    $ctx; exit_on_err $0 $? || return $?
     tmux a -t ${TMX_SESSION}
   )
 }

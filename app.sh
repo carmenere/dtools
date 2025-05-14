@@ -13,9 +13,10 @@ function app_log_file() {
 
 function app_start() {
   (
-    dt_parse_cmd_args "$@"; exit_on_err $? "$(dt_err $0)" || return $?
-    $ctx; exit_on_err $? "$(dt_err $0)" || return $?
-    dt_export_envs
+    dt_check_ctx $@; exit_on_err $0 $? || return $?
+    $ctx; exit_on_err $0 $? || return $?
+    echo "__inline_envs=${_inline_envs}"
+    cmd=("$(dt_inline_envs)")
 
     if [ -z "${PKILL_PATTERN}" ]; then echo "Parameter PKILL_PATTERN was not provided. Skip." return 0; fi
     if [ -z "${SIGNAL}" ]; then SIGNAL='KILL'; fi
@@ -25,7 +26,11 @@ function app_start() {
 
     echo "Starting ${APP}, binary ${BINARY} ..."
     export > ${LOG_FILE}
-    dt_exec_or_echo "${BINARY} ${OPTS} 2>&1 | tee -a ${LOG_FILE}"
+    cmd+=("${BINARY}")
+    cmd+=("${OPTS}")
+    cmd+=('2>&1')
+    cmd+=("| tee -a ${LOG_FILE}")
+    dt_exec_or_echo "${cmd}"
   )
 }
 
