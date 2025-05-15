@@ -158,7 +158,7 @@ function dt_run_targets() {
   if [ -z "$1" ]; then return 0; fi
   targets=("$@")
   for target in $@; do
-    dt_info "Running target ${BOLD}${CYAN}$target${RESET} ... "
+    dt_target $target; exit_on_err $0 $? || return $?
   done
 }
 
