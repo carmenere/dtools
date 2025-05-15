@@ -12,39 +12,44 @@
 #    echo "name= $name age= $age"
 #}
 
-function dt_debug() {
-  # $1 must contain info message
-  >&2 echo "${BOLD}${MAGENTA}[dtools][DEBUG]${RESET} $1"
-}
-
-function dt_info() {
-  # $1 must contain info message
-  >&2 echo "${BOLD}${GREEN}[dtools][INFO]${RESET} $1"
-}
-
 function dt_error() {
   # $1: must contain $0 of caller
   # $2: must contain err message
-  >&2 echo "${BOLD}${RED}[dtools][ERROR]${RESET}<in function ${BOLD}$1${RESET}> $2"
+  >&2 echo -e "${BOLD}${RED}[dtools][ERROR]${RESET}<in function ${BOLD}$1${RESET}> $2"
 }
 
-function dt_run_target() {
-  # $1 must contain $0 of caller
+function dt_info() {
+  # $1: info message
+  >&2 echo -e "${BOLD}${GREEN}[dtools][INFO]${RESET} $1"
+}
+
+function dt_echo() {
+  # $1: command to be echoed
+  >&2 echo -e "${BOLD}${DT_ECHO_COLOR}[dtools][ECHO]${RESET} Executing command $1"
+}
+
+function dt_debug() {
+  # $1: debug message
+  >&2 echo -e "${BOLD}${MAGENTA}[dtools][DEBUG]${RESET} $1"
+}
+
+function dt_target() {
+  # $1: name of target. Each target is a callable.
   if [ -z "$1" ]; then return 0; fi
-    >&2 echo "${BOLD}${GREEN}[dtools][INFO][target] ${GREEN}$1${RESET}"
+    dt_info "Running target ${BOLD}${GREEN}$1${RESET} ... "
     $1
 }
 
 function dt_exec() {
   if [ -z "$1" ]; then return 0; fi
-  if [ "$DT_EXEC_ECHO" = "y" ]; then
-    >&2 echo "${BOLD}${DT_EXEC_COLOR}[dtools][ECHO]${RESET} ${DT_EXEC_COLOR} $1 ${RESET}"
+  if [ "${DT_ECHO}" = "y" ]; then
+    dt_echo "${DT_ECHO_COLOR} $1 ${RESET}"
   fi
-  if ! eval "$1"; then >&2 echo "$(dt_error $0)"; return 99; fi
+  if ! eval "$1"; then dt_error $0; return 100; fi
 }
 
 function dt_debug_args() {
-  if [ "$DT_EXEC_DEBUG" = "y" ]; then
+  if [ "${DT_DEBUG}" = "y" ]; then
     dt_debug "${BOLD}function${RESET}: $1, ${BOLD}args${RESET}: '$2'"
   fi
 }
@@ -60,42 +65,23 @@ function exit_on_err() {
   fi
 }
 
-# "ctx" = context. It can be fully qualified (ctx_cargo, ctx_cargo_foo, ctx_cargo_build_foo) or short (default, foo)
-# The fully qualified has format "$prefix_$ctx"
-# Example: ( cargo_lookup_ctx ctx_cargo_foo )
-# Example: ( cargo_lookup_ctx foo )
-function dt_lookup_ctx() {
-  if [ -z "$1" ]; then return 0; fi
-  local orig_ctx=$1
-  shift
-  local prefixes=("$@")
-
-  if dt_check_ctx "${orig_ctx}"; then
-    echo "${orig_ctx}"
-    return 0
-  fi
-
-  for p in ${prefixes}; do
-    ctx="${p}_${orig_ctx}"
-    if dt_check_ctx "${ctx}"; then
-      echo "${ctx}"
-      return 0
-    fi
-  done
-
-  dt_error $0 "Cannot find ctx '${orig_ctx}' in prefixes '${prefixes}'."
-  return 99
-}
-
 function dt_check_ctx() {
   dt_debug_args "$0" "$*"
   ctx="$1"
-  if [ -z "$ctx" ]; then return 90; fi
-  if declare -f "$ctx" > /dev/null; then
-      return 0
-  else
-      return 99
+  mode="$2"
+  if [ -z "${ctx}" ]; then
+    dt_error $0 "Empty ctx"; return 99
   fi
+  if declare -f "$ctx" > /dev/null; then
+    return 0
+  else
+    dt_error $0 "ctx='$ctx' is NOT callable"; return 99
+  fi
+}
+
+function dt_ctx() {
+  dt_check_ctx $@; exit_on_err $0 $? || return $?
+  $ctx; exit_on_err $0 $? || return $?
 }
 
 # Example: ( ctx_cargo; dt_inline_envs )
@@ -151,15 +137,6 @@ function dt_check_cmd() {
   fi
 }
 
-function dt_check_ctx() {
-  dt_debug_args "$0" "$*"
-  ctx="$1"
-  mode="$2"
-  if [ -z "${ctx}" ]; then
-    dt_error $0 "ctx is empty ctx='${ctx}'."; return 99
-  fi
-}
-
 function dt_exec_or_echo() {
   dt_check_cmd $@
   if [ "$mode" = "echo" ]; then
@@ -173,7 +150,7 @@ function dt_run_targets() {
   if [ -z "$1" ]; then return 0; fi
   targets=("$@")
   for target in $@; do
-    dt_run_target $target
+    dt_target $target
   done
 }
 
@@ -191,25 +168,32 @@ function dt_paths() {
   export DT_LOCALS=${DT_DTOOLS}/locals
   export DT_SCRIPTS=${DT_DTOOLS}/scripts
   export DT_TOOLS=${DT_DTOOLS}/tools
-  export DT_TESTS=${DT_DTOOLS}/tests
 
   # Paths that depend on DT_ARTEFACTS
   export DT_LOGS="${DT_ARTEFACTS}/.logs"
 }
 
+# Example: dt_deploy ctx_stand_host
+function dt_deploy() {
+  dt_ctx $@; exit_on_err $0 $? || return $?
+  for step in $(for s in ${steps}; do echo "${s}"; done | sort -n -t _ -k 2); do
+    for target in $(eval echo "\${${step}[@]}"); do dt_target $target; done
+  done
+}
+
 function dt_defaults() {
-  dt_paths
   export DT_PROFILES=("dev")
-  export DT_EXEC_ECHO="y"
-  export DT_EXEC_COLOR="${YELLOW}"
-  export DT_EXEC_DEBUG="y"
+  export DT_ECHO="y"
+  export DT_DEBUG="n"
+  export DT_ECHO_COLOR="${YELLOW}"
 }
 
 function dt_init() {
+  dt_paths
+  . "${DT_CORE}/colors.sh"
   dt_defaults
   . "${DT_CORE}/rc.sh"
-  . "${DT_LOCALS}/rc.sh"
-  . "${DT_SCRIPTS}/rc.sh"
   . "${DT_TOOLS}/rc.sh"
-  . "${DT_TESTS}/rc.sh"
+  . "${DT_SCRIPTS}/rc.sh"
+  . "${DT_LOCALS}/rc.sh"
 }

@@ -29,9 +29,9 @@ function ctx_deps_macos() {
 
 function dt_install_deps() {
   if [ "$(os_name)" = "ubuntu" ] || [ "$(os_name)" = "debian" ]; then
-    dt_run_target ctx_deps_ubuntu
+    dt_target ctx_deps_ubuntu
   elif [ "$(os_name)" = "macos" ]; then
-    dt_run_target ctx_deps_macos
+    dt_target ctx_deps_macos
   fi
 
   if [ -z "${DEPS}" ]; then return 0; fi

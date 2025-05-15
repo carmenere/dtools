@@ -54,8 +54,7 @@ function psql_cmd_parse_args() {
 
 function psql_conn() {
   (
-    dt_check_ctx $@
-    $ctx
+    dt_ctx $@; exit_on_err $0 $? || return $?
     cmd=("$(dt_inline_envs)")
     cmd+=("${PG_DIR}/psql")
     dt_exec_or_echo "${cmd}" $mode

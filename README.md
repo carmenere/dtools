@@ -34,7 +34,6 @@ dt_init
 ```bash
 mkdir locals
 mkdir scripts
-mkdir tests
 mkdir tools
 ```
 7. Add `**/locals/` to file `.gitignore`.
@@ -42,19 +41,18 @@ mkdir tools
 ```bash
 touch locals/rc.sh
 touch scripts/rc.sh
-touch tests/rc.sh
 touch tools/rc.sh
 ```
 9. Add the following code to **each** `rc.sh` file you have just created:
 ```bash
 if [ -n "${BASH_SOURCE}" ]; then self="${BASH_SOURCE[0]}"; else self="$0"; fi
-dt_rc_load %DIRNAME% $(dirname $(realpath "$self"))
+self_dir=$(dirname $(realpath "${self}"))
+dt_rc_load $(basename "${self_dir}") "${self_dir}"
 ```
 
 The placeholder `%DIRNAME%` corresponds to the appropriate directory:
 - `locals`
 - `scripts`
-- `tests`
 - `tools`
 
 <br>
@@ -73,9 +71,6 @@ project_root_dir
 │   │   ├── ...
 │   │   └── rc.sh
 │   ├── scripts/
-│   │   ├── ...
-│   │   └── rc.sh
-│   ├── tests/
 │   │   ├── ...
 │   │   └── rc.sh
 │   ├── tools/

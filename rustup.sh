@@ -19,26 +19,26 @@ function rust_target_triple() {
 }
 
 function rustup_install() {
-  dt_check_ctx $@
+  dt_ctx $@; exit_on_err $0 $? || return $?
   ctx_rustup
   toolchain=${RUSTUP_TOOLCHAIN}-${RUSTUP_TARGET_TRIPLE};
 	echo "curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain ${toolchain}"
 }
 
 function rustup_toolchain_install() {
-  dt_check_ctx $@
+  dt_ctx $@; exit_on_err $0 $? || return $?
   toolchain=$1; if [ -z "${toolchain}" ]; then ctx_rustup; toolchain=${RUSTUP_TOOLCHAIN}-${RUSTUP_TARGET_TRIPLE}; fi
 	echo "rustup toolchain install ${toolchain}"
 }
 
 function rustup_default() {
-  dt_check_ctx $@
+  dt_ctx $@; exit_on_err $0 $? || return $?
   toolchain=$1; if [ -z "${toolchain}" ]; then ctx_rustup; toolchain=${RUSTUP_TOOLCHAIN}-${RUSTUP_TARGET_TRIPLE}; fi
 	echo "rustup default ${toolchain}"
 }
 
 function rustup_component_add() {
-  dt_check_ctx $@
+  dt_ctx $@; exit_on_err $0 $? || return $?
   components=$1; if [ -z "$components" ]; then ctx_rustup; components="'${RUSTUP_COMPONENTS}'"; fi
 	echo "rustup component add ${components}"
 }
