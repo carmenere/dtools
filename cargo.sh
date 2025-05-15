@@ -296,7 +296,7 @@ function ctx_cargo() {
   # MANIFEST_PATH depends on both MANIFEST and MANIFEST_DIR
   if [ -n "${MANIFEST_DIR}" ] && [ -n "${MANIFEST}" ]; then MANIFEST_PATH="${MANIFEST_DIR}/${MANIFEST}"; fi
 
-  _envs+=(CARGO_BUILD_TARGET CARGO_TARGET_DIR RUSTFLAGS)
+  _export_envs+=(CARGO_BUILD_TARGET CARGO_TARGET_DIR RUSTFLAGS)
   # by default inline all env
-  _inline_envs=(${_envs[@]})
+  _inline_envs=(${_export_envs[@]})
 }

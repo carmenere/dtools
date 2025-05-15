@@ -20,8 +20,8 @@ function ctx_sqlx() {
   SCHEMAS="${DT_PROJECT}/migrations/schemas"
   TMP_SCHEMAS="${DT_ARTEFACTS}/schemas"
   DATABASE_URL="postgres://${PGUSER}:${PGPASSWORD}@${PGHOST}:${PGPORT}/${PGDATABASE}"
-  _envs=(DATABASE_URL)
-  _inline_envs=(${_envs[@]})
+  _export_envs=(DATABASE_URL)
+  _inline_envs=(${_export_envs[@]})
 }
 
 function sqlx_pre_run() {
