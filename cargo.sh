@@ -1,3 +1,95 @@
+function cargo_pkg_opt() {
+  if [ -n "${PACKAGE}" ]; then
+    # If package is specified use --package
+    cmd+=(--package "${PACKAGE}")
+  fi
+}
+
+function cargo_workspace_opt() {
+  if [ -z "${PACKAGE}" ]; then
+    # If package is NOT specified use --workspace with --exclude
+    cmd+=(--workspace)
+    for exc in ${EXCLUDE}; do
+      cmd+=(--exclude ${exc})
+    done
+  fi
+}
+
+function cargo_target_selection() {
+  # By default: --bins --lib
+  # When no target selection options are given, cargo build will build all binary and library targets of the selected packages.
+  # Binaries are skipped if they have required-features that are missing.
+  if [ -z "${BINS}" ]; then return 0; fi
+  for bin in ${BINS}; do
+    cmd+=(--bin "${bin}")
+  done
+}
+
+function cargo_shared_manifest_opts() {
+  if [ "${FROZEN}" = "y" ]; then cmd+=(--frozen); fi
+  if [ "${LOCKED}" = "y" ]; then cmd+=(--locked); fi
+  if [ "${OFFLINE}" = "y" ]; then cmd+=(--offline); fi
+}
+
+function cargo_features_opts() {
+  if [ "${ALL_FEATURES}" = "y" ]; then cmd+=(--all-features); fi
+  if [ "${NO_DEFAULT_FEATURES}" = "y" ]; then cmd+=(--no-default-features); fi
+  if [ -n "${FEATURES}" ]; then cmd+=(--features "'${FEATURES}'"); fi
+}
+
+function cargo_install_opts() {
+  cargo_shared_manifest_opts
+  if [ "${FORCE}" = "y" ]; then cmd+=(--force); fi
+}
+
+function cargo_uninstall_opts() {
+  cargo_shared_manifest_opts
+}
+
+function cargo_fmt_opts() {
+  cargo_pkg_opt
+  if [ -n "${MESSAGE_FORMAT}" ]; then cmd+=(--message-format "${MESSAGE_FORMAT}"); fi
+  if [ -n "${MANIFEST_PATH}" ]; then cmd+=(--manifest-path "${MANIFEST_PATH}"); fi
+}
+
+function cargo_shared_build_check_test_doc_opts() {
+  cargo_pkg_opt
+  cargo_workspace_opt
+  cargo_target_selection
+  cargo_features_opts
+  if [ "${IGNORE_RUST_VERSION}" = "y" ]; then cmd+=(--ignore-rust-version); fi
+  if [ -n "${MESSAGE_FORMAT}" ]; then cmd+=(--message-format "${MESSAGE_FORMAT}"); fi
+  if [ -n "${PROFILE}" ]; then cmd+=(--profile "${PROFILE}"); fi
+  if [ -n "${MANIFEST_PATH}" ]; then cmd+=(--manifest-path "${MANIFEST_PATH}"); fi
+}
+
+function cargo_build_opts() {
+  cargo_shared_manifest_opts
+  cargo_shared_build_check_test_doc_opts
+}
+
+function cargo_clippy_opts() {
+  cargo_shared_manifest_opts
+  cargo_shared_build_check_test_doc_opts
+}
+
+function cargo_test_opts() {
+  cargo_shared_manifest_opts
+  cargo_shared_build_check_test_doc_opts
+}
+
+function cargo_doc_opts() {
+  cargo_shared_manifest_opts
+  cargo_shared_build_check_test_doc_opts
+}
+
+function cargo_clean_opts() {
+  cargo_pkg_opt
+  cargo_shared_manifest_opts
+  if [ -n "${PROFILE}" ]; then cmd+=(--profile "${PROFILE}"); fi
+  if [ -n "${MANIFEST_PATH}" ]; then cmd+=(--manifest-path "${MANIFEST_PATH}"); fi
+}
+
 function cargo_cache_clean() {
   cargo cache -r all
 }
@@ -11,12 +103,13 @@ function cargo_cache_clean() {
 
 function cargo_install() {
   (
-    dt_check_ctx $@
-    $ctx; exit_on_err $0 $? || return $?
+    if [ -z "${CRATE_NAME}" ]; then dt_error $0 "Var CRATE_NAME is empty"; return 99; fi
+    if [ -z "${CRATE_VERSION}" ]; then dt_error $0 "Var CRATE_VERSION is empty"; return 99; fi
+    dt_ctx $@; exit_on_err $0 $? || return $?
+    cmd=("$(dt_inline_envs)")
     cmd=(cargo install)
-    if [ -z "${CRATE_NAME}" ]; then return 99; fi
-    if [ -n "${CRATE_VERSION}" ]; then cmd+=(--version "${CRATE_VERSION}"); fi
-    cargo_manifest_opts
+    cmd+=(--version "${CRATE_VERSION}")
+    cargo_install_opts
     cmd+=(${CRATE_NAME})
     dt_exec_or_echo "${cmd}" $mode
   )
@@ -24,11 +117,11 @@ function cargo_install() {
 
 function cargo_uninstall() {
   (
-    dt_check_ctx $@
-    $ctx; exit_on_err $0 $? || return $?
+    if [ -z "${CRATE_NAME}" ]; then dt_error $0 "Var CRATE_NAME is empty"; return 99; fi
+    dt_ctx $@; exit_on_err $0 $? || return $?
+    cmd=("$(dt_inline_envs)")
     cmd=(cargo uninstall)
-    if [ -z "${CRATE_NAME}" ]; then return 99; fi
-    cargo_manifest_opts
+    cargo_uninstall_opts
     cmd+=(${CRATE_NAME})
     dt_exec_or_echo "${cmd}" $mode
   )
@@ -69,94 +162,24 @@ function cargo_bin_dir() {
   echo "${bin_dir}"
 }
 
-function cd_manifest_dir() {
-  if [ ! -d "${MANIFEST_DIR}" ]; then return 99; fi
-  cd "${MANIFEST_DIR}"
-}
-
-function cargo_pkg_selection() {
-  if [ -n "${PACKAGE}" ]; then
-    # If package is specified use --package
-    cmd+=(--package "${PACKAGE}")
-  fi
-}
-
-function cargo_workspace_opts() {
-  if [ -z "${PACKAGE}" ]; then
-    # If package is NOT specified use --workspace with --exclude
-    cmd+=(--workspace)
-    for exc in ${EXCLUDE}; do
-      cmd+=(--exclude ${exc})
-    done
-  fi
-}
-
-function cargo_target_selection() {
-  # By default: --bins --lib
-  # When no target selection options are given, cargo build will build all binary and library targets of the selected packages.
-  # Binaries are skipped if they have required-features that are missing.
-  if [ -z "${BINS}" ]; then return 0; fi
-  for bin in ${BINS}; do
-    cmd+=(--bin "${bin}")
-  done
-}
-
-function cargo_manifest_opts() {
-  if [ "${FROZEN}" = "y" ]; then cmd+=(--frozen); fi
-  if [ "${LOCKED}" = "y" ]; then cmd+=(--locked); fi
-  if [ "${OFFLINE}" = "y" ]; then cmd+=(--offline); fi
-  if [ "${FORCE}" = "y" ]; then cmd+=(--force); fi
-  if [ "${IGNORE_RUST_VERSION}" = "y" ]; then cmd+=(--ignore-rust-version); fi
-}
-
-function cargo_feature_selection() {
-  if [ "${NO_DEFAULT_FEATURES}" = "y" ]; then cmd+=(--no-default-features); fi
-  if [ "${ALL_FEATURES}" = "y" ]; then cmd+=(--all-features); fi
-  if [ -n "${FEATURES}" ]; then cmd+=(--features "'${FEATURES}'"); fi
-}
-
-function cargo_common_opts() {
-  if [ -n "${MESSAGE_FORMAT}" ]; then cmd+=(--message-format "${MESSAGE_FORMAT}"); fi
-  if [ -n "${PROFILE}" ]; then cmd+=(--profile "${PROFILE}"); fi
-}
-
-function cargo_clippy_opts() {
-  OPTS=()
-  if [ -n "${CLIPPY_LINTS}" ]; then OPTS+=("'${CLIPPY_LINTS}'"); fi
-  if [ -n "${CLIPPY_REPORT}" ]; then OPTS+=("1>${CLIPPY_REPORT}"); fi
-  if [ -n "${OPTS}" ]; then cmd+=(-- "${OPTS}"); fi
-}
-
-function cargo_gen_cli() {
-  cargo_pkg_selection
-  cargo_workspace_opts
-  cargo_target_selection
-  cargo_feature_selection
-  cargo_manifest_opts
-  cargo_common_opts
-}
-
 function cargo_build() {
   (
-    dt_check_ctx $@
-    $ctx; exit_on_err $0 $? || return $?
+    dt_ctx $@; exit_on_err $0 $? || return $?
     cmd=("$(dt_inline_envs)")
     cmd+=(cargo build)
-    cargo_gen_cli
+    cargo_build_opts
     dt_exec_or_echo "${cmd}" $mode
   )
 }
 
 function cargo_fmt() {
   (
-    dt_check_ctx $@
-    $ctx; exit_on_err $0 $? || return $?
+    dt_ctx $@; exit_on_err $0 $? || return $?
     cmd=("$(dt_inline_envs)")
     cmd+=(cargo)
-    if [ -n "${NIGHTLY_VERSION}" ]; then cmd+="+${NIGHTLY_VERSION}"; fi
+    if [ -n "${NIGHTLY_VERSION}" ]; then cmd+=("+${NIGHTLY_VERSION}"); fi
     cmd+=(fmt)
-    cargo_pkg_selection
-    cargo_manifest_opts
+    cargo_fmt_opts
     cmd+=(-- --check)
     dt_exec_or_echo "${cmd}" $mode
   )
@@ -164,25 +187,22 @@ function cargo_fmt() {
 
 function cargo_fmt_fix() {
   (
-    dt_check_ctx $@
-    $ctx; exit_on_err $0 $? || return $?
+    dt_ctx $@; exit_on_err $0 $? || return $?
     cmd=("$(dt_inline_envs)")
     cmd+=(cargo)
-    if [ -n "${NIGHTLY_VERSION}" ]; then cmd+="+${NIGHTLY_VERSION}"; fi
+    if [ -n "${NIGHTLY_VERSION}" ]; then cmd+=("+${NIGHTLY_VERSION}"); fi
     cmd+=(fmt)
-    cargo_pkg_selection
-    cargo_manifest_opts
+    cargo_fmt_opts
     dt_exec_or_echo "${cmd}" $mode
   )
 }
 
 function cargo_test() {
   (
-    dt_check_ctx $@
-    $ctx; exit_on_err $0 $? || return $?
+    dt_ctx $@; exit_on_err $0 $? || return $?
     cmd=("$(dt_inline_envs)")
     cmd+=(cargo test)
-    cargo_gen_cli
+    cargo_test_opts
     dt_exec_or_echo "${cmd}" $mode
   )
 }
@@ -190,11 +210,9 @@ function cargo_test() {
 # "cargo clippy" uses "cargo check" under the hood.
 function cargo_clippy() {
   (
-    dt_check_ctx $@
-    $ctx; exit_on_err $0 $? || return $?
+    dt_ctx $@; exit_on_err $0 $? || return $?
     cmd=("$(dt_inline_envs)")
     cmd+=(cargo clippy)
-    cargo_gen_cli
     cargo_clippy_opts
     dt_exec_or_echo "${cmd}" $mode
   )
@@ -202,12 +220,9 @@ function cargo_clippy() {
 
 function cargo_clippy_fix() {
   (
-    dt_check_ctx $@
-    $ctx; exit_on_err $0 $? || return $?
+    dt_ctx $@; exit_on_err $0 $? || return $?
     cmd=("$(dt_inline_envs)")
-    cmd+=(cargo clippy)
-    cargo_gen_cli
-    cmd+=(--fix --allow-staged)
+    cmd+=(cargo clippy --fix --allow-staged)
     cargo_clippy_opts
     dt_exec_or_echo "${cmd}" $mode
   )
@@ -215,45 +230,35 @@ function cargo_clippy_fix() {
 
 function cargo_doc() {
   (
-    dt_check_ctx $@
-    $ctx; exit_on_err $0 $? || return $?
+    dt_ctx $@; exit_on_err $0 $? || return $?
     cmd=("$(dt_inline_envs)")
-    cmd+=(cargo doc)
-    cargo_gen_cli
-    cmd+=(--no-deps --document-private-items)
+    cmd+=(cargo doc --no-deps --document-private-items)
+    cargo_doc_opts
     dt_exec_or_echo "${cmd}" $mode
   )
 }
 
 function cargo_doc_open() {
   (
-    dt_check_ctx $@
-    $ctx; exit_on_err $0 $? || return $?
+    dt_ctx $@; exit_on_err $0 $? || return $?
     cmd=("$(dt_inline_envs)")
-    cmd+=(cargo doc)
-    cargo_gen_cli
-    cmd+=(--no-deps --document-private-items --open)
+    cmd+=(cargo doc --no-deps --document-private-items --open)
+    cargo_doc_opts
     dt_exec_or_echo "${cmd}" $mode
   )
 }
 
 function cargo_clean() {
   (
-    dt_check_ctx $@
-    $ctx; exit_on_err $0 $? || return $?
+    dt_ctx $@; exit_on_err $0 $? || return $?
     cmd=("$(dt_inline_envs)")
     cmd+=(cargo clean)
-    if [ -n "${PACKAGE}" ]; then
-      cmd+=(--package "${PACKAGE}")
-    fi
+    cargo_clean_opts
     dt_exec_or_echo "${cmd}" $mode
   )
 }
 
 # BINS is an array, by default BINS=()
-# FLAGS is an array, by default FLAGS=()
-# FLAGS may contain (| means or/and):
-#   --all-features | --no-default-features | --offline | --locked | --frozen | --ignore-rust-version
 function ctx_cargo() {
   ctx_rustup
   # inherited from ctx_rustup
@@ -268,9 +273,9 @@ function ctx_cargo() {
   CLIPPY_REPORT=
   EXCLUDE=()
   FEATURES=()
-  FLAGS=()
   MANIFEST='Cargo.toml'
   MANIFEST_DIR=
+  MANIFEST_PATH=
   MESSAGE_FORMAT=
   PACKAGE=
   PROFILE=$(cargo_profile)
@@ -287,6 +292,9 @@ function ctx_cargo() {
 
   # BINS_DIR depends on CARGO_TARGET_DIR, CARGO_TARGET_DIR, BUILD_MODE
   BINS_DIR=$(cargo_bin_dir)
+
+  # MANIFEST_PATH depends on both MANIFEST and MANIFEST_DIR
+  if [ -n "${MANIFEST_DIR}" ] && [ -n "${MANIFEST}" ]; then MANIFEST_PATH="${MANIFEST_DIR}/${MANIFEST}"; fi
 
   _envs+=(CARGO_BUILD_TARGET CARGO_TARGET_DIR RUSTFLAGS)
   # by default inline all env
