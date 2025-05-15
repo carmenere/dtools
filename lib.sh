@@ -41,11 +41,12 @@ function dt_target() {
 }
 
 function dt_exec() {
-  if [ -z "$1" ]; then return 0; fi
+  cmd="$1" | sed 's/^[ \t]*//'
+  if [ -z "$cmd" ]; then return 0; fi
   if [ "${DT_ECHO}" = "y" ]; then
-    dt_echo "${DT_ECHO_COLOR} $1 ${RESET}"
+    dt_echo "${DT_ECHO_COLOR} $cmd${RESET}"
   fi
-  if ! eval "$1"; then dt_error $0; return 100; fi
+  if ! eval "$cmd"; then dt_error $0; return 100; fi
 }
 
 function dt_debug_args() {
@@ -100,7 +101,7 @@ function dt_inline_envs() {
 function dt_export_envs() {
   dt_debug_args "$0" "$*"
   envs=()
-  for env in ${_envs}; do
+  for env in ${_export_envs}; do
     if [ -z "$env" ]; then continue; fi
     val=$(dt_escape_single_quotes "$(eval echo "\$$env")")
     if [ -n "${val}" ]; then export ${env}="${val}"; fi
@@ -110,7 +111,7 @@ function dt_export_envs() {
 function dt_unexport_envs() {
   dt_debug_args "$0" "$*"
   envs=()
-  for env in ${_envs}; do
+  for env in ${_export_envs}; do
     if [ -n "${val}" ]; then unset ${env}; fi
   done
 }
@@ -157,7 +158,7 @@ function dt_run_targets() {
   if [ -z "$1" ]; then return 0; fi
   targets=("$@")
   for target in $@; do
-    dt_info "Running target ${BOLD}${CYAN}$target${RESET} ... "
+    dt_target $target; exit_on_err $0 $? || return $?
   done
 }
 

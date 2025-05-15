@@ -32,6 +32,7 @@ function console_start() {
 function console_stop() {
   dt_ctx $@; exit_on_err $0 $? || return $?
   echo "Sending signal 'KILL' to ${APP} ..."
-  ps -A -o pid,args | grep -v grep | grep "${PKILL_PATTERN}" | awk '{print $1}' | xargs -I {} kill -s 'KILL' {} || true
+  cmd="ps -A -o pid,args | grep -v grep | grep '${PKILL_PATTERN}' | awk '{print \$1}' | xargs -I {} kill -s 'KILL' {} || true"
+  dt_exec_or_echo "${cmd}"
   echo "done."
 }
