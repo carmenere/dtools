@@ -15,17 +15,17 @@
 function dt_error() {
   # $1: must contain $0 of caller
   # $2: must contain err message
-  >&2 echo -e "${BOLD}${RED}[dtools][ERROR]${RESET}<in function ${BOLD}$1${RESET}> $2"
+  >&2 echo -e "${BOLD}[dtools]${RED}[ERROR]<in function $1>${RESET} $2"
 }
 
 function dt_info() {
   # $1: info message
-  >&2 echo -e "${BOLD}${GREEN}[dtools][INFO]${RESET} $1"
+  >&2 echo -e "${BOLD}[dtools]${GREEN}[INFO]${RESET} $1"
 }
 
 function dt_echo() {
   # $1: command to be echoed
-  >&2 echo -e "${BOLD}${DT_ECHO_COLOR}[dtools][ECHO]${RESET} Executing command $1"
+  >&2 echo -e "${BOLD}[dtools]${DT_ECHO_COLOR}[ECHO]${RESET} Executing command $1"
 }
 
 function dt_debug() {
@@ -103,9 +103,16 @@ function dt_export_envs() {
   for env in ${_envs}; do
     if [ -z "$env" ]; then continue; fi
     val=$(dt_escape_single_quotes "$(eval echo "\$$env")")
-    if [ -n "${val}" ]; then envs+=("export ${env}=$'${val}';"); fi
+    if [ -n "${val}" ]; then export ${env}="${val}"; fi
   done
-  echo "${envs}"
+}
+
+function dt_unexport_envs() {
+  dt_debug_args "$0" "$*"
+  envs=()
+  for env in ${_envs}; do
+    if [ -n "${val}" ]; then unset ${env}; fi
+  done
 }
 
 function dt_escape_single_quotes() {
@@ -150,7 +157,7 @@ function dt_run_targets() {
   if [ -z "$1" ]; then return 0; fi
   targets=("$@")
   for target in $@; do
-    dt_target $target
+    dt_info "Running target ${BOLD}${CYAN}$target${RESET} ... "
   done
 }
 
@@ -162,7 +169,7 @@ function dt_paths() {
   if [ -z "${DT_DTOOLS}" ]; then DT_DTOOLS="$(pwd)"; fi
 
   # Paths that depend on DT_DTOOLS
-  export DT_PROJECT="${DT_DTOOLS}"/..
+  export DT_PROJECT=$(realpath "${DT_DTOOLS}"/..)
   export DT_ARTEFACTS="${DT_DTOOLS}/.artefacts"
   export DT_CORE=${DT_DTOOLS}/core
   export DT_LOCALS=${DT_DTOOLS}/locals
@@ -176,8 +183,12 @@ function dt_paths() {
 # Example: dt_deploy ctx_stand_host
 function dt_deploy() {
   dt_ctx $@; exit_on_err $0 $? || return $?
+  dt_info "Deploying stand ${BOLD}${MAGENTA}$ctx${RESET} ... "
   for step in $(for s in ${steps}; do echo "${s}"; done | sort -n -t _ -k 2); do
-    for target in $(eval echo "\${${step}[@]}"); do dt_target $target; done
+    dt_info "Running step ${BOLD}${CYAN}$step${RESET} ... "
+    for target in $(eval echo "\${${step}[@]}"); do
+      dt_target $target; exit_on_err $0 $? || return $?
+    done
   done
 }
 
