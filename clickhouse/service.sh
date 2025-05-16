@@ -1,4 +1,5 @@
 function ch_service() {
+  dt_debug_args "$0" "$*"
   (
     dt_ctx $@; exit_on_err $0 $? || return $?
     if [ "$(os_name)" = "macos" ]; then
@@ -10,6 +11,7 @@ function ch_service() {
 }
 
 function clickhouse_conf() {
+  dt_debug_args "$0" "$*"
   (
     dt_ctx $@; exit_on_err $0 $? || return $?
     if [ "$(os_name)" = "macos" ]; then
@@ -21,6 +23,7 @@ function clickhouse_conf() {
 }
 
 function ch_install() {
+  dt_debug_args "$0" "$*"
   (
     dt_ctx $@; exit_on_err $0 $? || return $?
     if [ "$(os_name)" = "debian" ] || [ "$(os_name)" = "ubuntu" ]; then
@@ -40,6 +43,7 @@ function ch_install() {
 }
 
 function ch_prepare_admin_xml() {
+  dt_debug_args "$0" "$*"
   (
     dt_ctx $@; exit_on_err $0 $? || return $?
     if [ "$(os_name)" = "macos" ]; then
@@ -52,6 +56,7 @@ function ch_prepare_admin_xml() {
 }
 
 function ch_user_xml_dir() {
+  dt_debug_args "$0" "$*"
   (
     dt_ctx $@; exit_on_err $0 $? || return $?
     if [ "$(os_name)" = "macos" ]; then
@@ -62,28 +67,24 @@ function ch_user_xml_dir() {
   )
 }
 
-function ctx_ch() {
-    CLICKHOUSE_DB="default"
-    CLICKHOUSE_HOST="localhost"
-    CLICKHOUSE_PASSWORD="1234567890"
-    CLICKHOUSE_USER="dt_admin"
-    # for clickhouse-client
-    CLICKHOUSE_PORT=9000
-    # for applications
-    CLICKHOUSE_HTTP_PORT=8123
-    CH_MAJOR=23
-    CH_MINOR=5
-    CH_PATCH=46
-    CH_VERSION="${CH_MAJOR}.${CH_MINOR}.${CH_PATCH}"
-
-}
-
 function ctx_service_ch() {
-  ctx_ch
-  CH_USER_XML="$(ch_user_xml_dir ctx_ch)/admin.xml"
+  CLICKHOUSE_DB="default"
+  CLICKHOUSE_HOST="localhost"
+  CLICKHOUSE_PASSWORD="1234567890"
+  CLICKHOUSE_USER="dt_admin"
+  # for clickhouse-client
+  CLICKHOUSE_PORT=9000
+  # for applications
+  CLICKHOUSE_HTTP_PORT=8123
+  CH_MAJOR=23
+  CH_MINOR=5
+  CH_PATCH=46
+  CH_VERSION="${CH_MAJOR}.${CH_MINOR}.${CH_PATCH}"
+
   CH_USER_XML_DT="${DT_CORE}/clickhouse/admin.xml"
-  CH_SERVICE=$(ch_service ctx_ch)
-  CH_CONFIG_XML=$(clickhouse_conf ctx_ch)
+  CH_USER_XML="$(ch_user_xml_dir _)/admin.xml"; exit_on_err $0 $? || return $?
+  CH_SERVICE=$(ch_service _); exit_on_err $0 $? || return $?
+  CH_CONFIG_XML=$(clickhouse_conf _); exit_on_err $0 $? || return $?
   
   _export_envs=(
     CLICKHOUSE_HOST

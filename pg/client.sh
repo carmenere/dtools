@@ -1,13 +1,9 @@
-function ctx_psql_connn() {
-  _export_envs=(PGHOST PGPORT PGUSER PGDATABASE PGPASSWORD)
-  _inline_envs=(${_export_envs[@]})
-}
-
 function ctx_psql_conn_admin() {
-  ctx_psql_connn
   ctx_pg
   pg_db_postgres
   pg_user_admin
+  _export_envs=(PGHOST PGPORT PGUSER PGDATABASE PGPASSWORD)
+  _inline_envs=(${_export_envs[@]})
 }
 
 function psql_conn_local_admin() {

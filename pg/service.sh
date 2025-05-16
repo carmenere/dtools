@@ -1,31 +1,5 @@
-function pg_new_path() {
-  (
-    dt_ctx $@; exit_on_err $0 $? || return $?
-    PG_DIR="$(pg_dir $ctx)"
-    echo "${PATH}" | grep -E -s "^${PG_DIR}" 1>/dev/null 2>&1
-    if [ $? != 0 ] && [ -n "${PG_DIR}" ]; then
-      # Cut all duplicates of ${PG_DIR}
-      PATH="$(echo "${PATH}" | sed -E -e ":label; s|(.*):${PG_DIR}(.*)|\1\2|g; t label;")"
-      # Prepend ${PG_DIR}
-      echo "${PG_DIR}:${PATH}"
-    else
-      echo "${PATH}"
-    fi
-  )
-}
-
-function pg_service() {
-  (
-    dt_ctx $@; exit_on_err $0 $? || return $?
-    if [ "$(os_name)" = "macos" ]; then
-      echo "postgresql@${PG_MAJOR}"
-    else
-      echo "postgresql"
-    fi
-  )
-}
-
 function pg_dir() {
+  dt_debug_args "$0" "$*"
   (
     dt_ctx $@; exit_on_err $0 $? || return $?
     if [ "$(os_name)" = "macos" ]; then
@@ -38,7 +12,39 @@ function pg_dir() {
   )
 }
 
+function pg_new_path() {
+  dt_debug_args "$0" "$*"
+  (
+    dt_ctx $@; exit_on_err $0 $? || return $?
+    NPATH="${PATH}"
+    echo "${NPATH}" | grep -E -s "^${PG_DIR}" 1>/dev/null 2>&1
+    if [ $? != 0 ] && [ -n "${PG_DIR}" ]; then
+      # Cut all duplicates of ${PG_DIR} from NPATH
+      NPATH="$(echo "${NPATH}" | sed -E -e ":label; s|(.*):${PG_DIR}(.*)|\1\2|g; t label;")"
+      # Prepend ${PG_DIR}
+      echo "${PG_DIR}:${NPATH}"
+    else
+      echo "${NPATH}"
+    fi
+  )
+}
+
+function pg_service() {
+  dt_debug_args "$0" "$*"
+  (
+    dt_ctx $@; exit_on_err $0 $? || return $?
+    if [ "$(os_name)" = "macos" ]; then
+      echo "postgresql@${PG_MAJOR}"
+    else
+      echo "postgresql"
+    fi
+  )
+}
+
+
+
 function pg_hba_conf() {
+  dt_debug_args "$0" "$*"
   (
     dt_ctx $@; exit_on_err $0 $? || return $?
     if [ "$(os_name)" = "macos" ]; then
@@ -50,6 +56,7 @@ function pg_hba_conf() {
 }
 
 function postgresql_conf() {
+  dt_debug_args "$0" "$*"
   (
     dt_ctx $@; exit_on_err $0 $? || return $?
     if [ "$(os_name)" = "macos" ]; then
@@ -61,6 +68,7 @@ function postgresql_conf() {
 }
 
 function pg_install() {
+  dt_debug_args "$0" "$*"
   (
     dt_ctx $@; exit_on_err $0 $? || return $?
     if [ "$(os_name)" = "debian" ] || [ "$(os_name)" = "ubuntu" ]; then
@@ -107,6 +115,7 @@ function pg_install() {
 #   '$a Trailor' : here pattern "$" matches last line and command "a" appends 'Trailor' after it
 # 2) The "t" command checks if the previous substitution was successful. If it was, it goto  to the end of the block , skipping the next commands.
 function pg_hba_conf_add_policy() {
+  dt_debug_args "$0" "$*"
   (
     dt_ctx $@; exit_on_err $0 $? || return $?
     dt_exec_or_echo "if grep -qE '^\s*host\s+all\s+all\s+0.0.0.0/0\s+md5\s*$' \"${PG_HBA_CONF}\"; then return 0; fi"
@@ -115,34 +124,30 @@ function pg_hba_conf_add_policy() {
 }
 
 function postgresql_conf_set_port() {
+  dt_debug_args "$0" "$*"
   (
     dt_ctx $@; exit_on_err $0 $? || return $?
     dt_exec_or_echo "sed -i -E -e \"s/^\s*#?\s*(port\s*=\s*[0-9]+)\s*$/port = ${PGPORT}/\" \"${PG_CONF}\""
   )
 }
 
-function ctx_pg() {
-    PGHOST="localhost"
-    PGPORT=5432
-
-    PG_MAJOR=17
-    PG_MINOR=4
-    PG_VERSION="${PG_MAJOR}.${PG_MINOR}"
-}
-
 function ctx_service_pg() {
-  ctx_pg
-  PATH=$(pg_new_path ctx_pg)
-  PG_DIR=$(pg_dir ctx_pg)
-  PG_SERVICE=$(pg_service ctx_pg)
+  PGHOST="localhost"
+  PGPORT=5432
+  PG_MAJOR=17
+  PG_MINOR=4
+  PG_VERSION="${PG_MAJOR}.${PG_MINOR}"
+  PG_DIR=$(pg_dir _); exit_on_err $0 $? || return $?
+  PATH=$(pg_new_path _); exit_on_err $0 $? || return $?
+  PG_SERVICE=$(pg_service _); exit_on_err $0 $? || return $?
 
   # Depends on PG_SERVICE and
-  PG_HBA_CONF=$(pg_hba_conf ctx_pg)
-  PG_CONF=$(postgresql_conf ctx_pg)
+  PG_HBA_CONF=$(pg_hba_conf _); exit_on_err $0 $? || return $?
+  PG_CONF=$(postgresql_conf _); exit_on_err $0 $? || return $?
 
   # Depends on PATH
-  PG_CONFIG_LIBDIR="$(pg_config --pkglibdir | tr ' ' '\n')"
-  PG_CONFIG_SHAREDIR="$(pg_config --sharedir)"
+  PG_CONFIG_LIBDIR="$(pg_config --pkglibdir | tr ' ' '\n')"; exit_on_err $0 $? || return $?
+  PG_CONFIG_SHAREDIR="$(pg_config --sharedir)"; exit_on_err $0 $? || return $?
   
   _export_envs=(
     PG_CONF
@@ -157,6 +162,7 @@ function ctx_service_pg() {
     PGHOST
     PGPORT
   )
+  _inline_envs=()
 }
 
 function pg_user_admin() {

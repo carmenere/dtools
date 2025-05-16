@@ -73,6 +73,11 @@ function dt_check_ctx() {
   if [ -z "${ctx}" ]; then
     dt_error $0 "Empty ctx"; return 99
   fi
+  # _ means current context, so we assign nothing to ctx
+  if [ "${ctx}" = '_' ]; then
+    ctx=
+    return 0
+  fi
   if declare -f "$ctx" > /dev/null; then
     return 0
   else
@@ -162,6 +167,10 @@ function dt_run_targets() {
 
 function dt_sleep_5() {
   sleep 5
+}
+
+function dt_sleep_10() {
+  sleep 10
 }
 
 function dt_paths() {

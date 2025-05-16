@@ -106,13 +106,13 @@ function docker_default_tag() {
 }
 
 function docker_pull_opts() {
-  if [ -n "${IMAGE}"]; then cmd+=("${IMAGE}"); dt_error $0 "Var 'IMAGE' is empty"; return 99; fi
+  if [ -n "${IMAGE}" ]; then cmd+=("${IMAGE}"); dt_error $0 "Var 'IMAGE' is empty"; return 99; fi
 }
 
 function docker_build_opts() {
-  if [ -z "${DOCKERFILE}"]; then dt_error $0 "Var 'DOCKERFILE' is empty"; return 99; fi
-  if [ -z "${IMAGE}"]; then dt_error $0 "Var 'IMAGE' is empty"; return 99; fi
-  if [ -z "${CTX}"]; then dt_error $0 "Var 'CTX' is empty"; return 99; fi
+  if [ -z "${DOCKERFILE}" ]; then dt_error $0 "Var 'DOCKERFILE' is empty"; return 99; fi
+  if [ -z "${IMAGE}" ]; then dt_error $0 "Var 'IMAGE' is empty"; return 99; fi
+  if [ -z "${CTX}" ]; then dt_error $0 "Var 'CTX' is empty"; return 99; fi
 
   if [ "${NO_CACHE}" = "y" ]; then cmd+=(--no-cache); fi
   cmd+=(-f "${DOCKERFILE}")
@@ -158,7 +158,12 @@ function docker_build_arg_opts() {
   done
 }
 
+function docker_check() {
+  if ! docker ps 1>/dev/null; then dt_error $0 "${BOLD}Service docker is not run${RESET}"; return 99; fi
+}
+
 function docker_pull() {
+  docker_check; exit_on_err $0 $? || return $?
   (
     dt_ctx $@; exit_on_err $0 $? || return $?
     cmd=("$(dt_inline_envs)")
@@ -169,6 +174,7 @@ function docker_pull() {
 }
 
 function docker_build() {
+  docker_check; exit_on_err $0 $? || return $?
   (
     dt_ctx $@; exit_on_err $0 $? || return $?
     cmd=("$(dt_inline_envs)")
@@ -177,10 +183,6 @@ function docker_build() {
     docker_build_opts
     dt_exec_or_echo "${cmd}" $mode
   )
-}
-
-function docker_check() {
-  if ! docker ps 1>/dev/null; then dt_error $0 "Service docker is not run"; fi
 }
 
 function docker_exec() {
