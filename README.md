@@ -57,14 +57,10 @@ The placeholder `%DIRNAME%` corresponds to the appropriate directory:
 - `locals`
 - `scripts`
 - `tools`
-
-<br>
-
-If any of above dirs contains **subdir**, you must put `rc.sh` file in **each** subdir and for every **subdir** add to `rc.sh` of **parent** dir (for example, `tools`):
+10. If **dir** contains **subdir**, you must put `rc.sh` file in **each** subdir and for every **subdir** add to `rc.sh` of **parent** dir (for example, `tools/rc.sh`) following:
 ```bash
 . "$(self_dir "$0")/%SUBDIR%/rc.sh"
 ```
-
 where `%SUBDIR%` is a **placeholder for subdir**.<br>
 
 <br>
