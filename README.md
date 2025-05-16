@@ -45,15 +45,27 @@ touch tools/rc.sh
 ```
 9. Add the following code to **each** `rc.sh` file you have just created:
 ```bash
-if [ -n "${BASH_SOURCE}" ]; then self="${BASH_SOURCE[0]}"; else self="$0"; fi
-self_dir=$(dirname $(realpath "${self}"))
-dt_rc_load $(basename "${self_dir}") "${self_dir}"
+function self_dir() {
+  #  $1: contains $0 of .sh script
+  if [ -n "${BASH_SOURCE}" ]; then self="${BASH_SOURCE[0]}"; else self="$1"; fi
+  echo "$(dirname $(realpath "${self}"))"
+}
+dt_rc_load $(basename "$(self_dir "$0")") "$(self_dir "$0")"
 ```
 
 The placeholder `%DIRNAME%` corresponds to the appropriate directory:
 - `locals`
 - `scripts`
 - `tools`
+
+<br>
+
+If any of above dirs contains **subdir**, you must put `rc.sh` file in **each** subdir and for every **subdir** add to `rc.sh` of **parent** dir (for example, `tools`):
+```bash
+. "$(self_dir "$0")/%SUBDIR%/rc.sh"
+```
+
+where `%SUBDIR%` is a **placeholder for subdir**.<br>
 
 <br>
 
