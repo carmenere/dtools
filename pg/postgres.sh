@@ -55,7 +55,7 @@ function pg_hba_conf() {
   )
 }
 
-function postgresql_conf() {
+function pg_conf() {
   dt_debug_args "$0" "$*"
   (
     dt_ctx $@; exit_on_err $0 $? || return $?
@@ -123,7 +123,7 @@ function pg_hba_conf_add_policy() {
   )
 }
 
-function postgresql_conf_set_port() {
+function pg_conf_set_port() {
   dt_debug_args "$0" "$*"
   (
     dt_ctx $@; exit_on_err $0 $? || return $?
@@ -143,7 +143,7 @@ function ctx_service_pg() {
 
   # Depends on PG_SERVICE and
   PG_HBA_CONF=$(pg_hba_conf _); exit_on_err $0 $? || return $?
-  PG_CONF=$(postgresql_conf _); exit_on_err $0 $? || return $?
+  PG_CONF=$(pg_conf _); exit_on_err $0 $? || return $?
 
   # Depends on PATH
   PG_CONFIG_LIBDIR="$(pg_config --pkglibdir | tr ' ' '\n')"; exit_on_err $0 $? || return $?

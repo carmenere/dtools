@@ -25,3 +25,9 @@ function os_codename() {
 function brew_prefix() {
   echo $(brew --prefix)
 }
+
+function _sudo() {
+  if [ "$(os_kernel)" = "Linux" ]; then
+    echo "sudo"
+  fi
+}

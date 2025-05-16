@@ -1,6 +1,11 @@
-if [ -n "${BASH_SOURCE}" ]; then self="${BASH_SOURCE[0]}"; else self="$0"; fi
-self_dir=$(dirname $(realpath "${self}"))
-dt_rc_load $(basename "${self_dir}") "${self_dir}"
+function self_dir() {
+  #  $1: contains $0 of .sh script
+  if [ -n "${BASH_SOURCE}" ]; then self="${BASH_SOURCE[0]}"; else self="$1"; fi
+  echo "$(dirname $(realpath "${self}"))"
+}
 
-. "${self_dir}/pg/rc.sh"
-. "${self_dir}/clickhouse/rc.sh"
+dt_rc_load $(basename "$(self_dir "$0")") "$(self_dir "$0")"
+
+. "$(self_dir "$0")/clickhouse/rc.sh"
+. "$(self_dir "$0")/pg/rc.sh"
+. "$(self_dir "$0")/redis/rc.sh"

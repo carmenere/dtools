@@ -106,7 +106,7 @@ function docker_default_tag() {
 }
 
 function docker_pull_opts() {
-  if [ -n "${IMAGE}" ]; then cmd+=("${IMAGE}"); dt_error $0 "Var 'IMAGE' is empty"; return 99; fi
+  if [ -n "${IMAGE}" ]; then cmd+=("${IMAGE}"); else dt_error $0 "Var 'IMAGE' is empty"; return 99; fi
 }
 
 function docker_build_opts() {
@@ -167,7 +167,7 @@ function docker_pull() {
   (
     dt_ctx $@; exit_on_err $0 $? || return $?
     cmd=("$(dt_inline_envs)")
-    cmd+=(docker pull ${IMAGE})
+    cmd+=(docker pull)
     docker_pull_opts
     dt_exec_or_echo "${cmd}" $mode
   )

@@ -10,7 +10,7 @@ function ch_service() {
   )
 }
 
-function clickhouse_conf() {
+function ch_conf() {
   dt_debug_args "$0" "$*"
   (
     dt_ctx $@; exit_on_err $0 $? || return $?
@@ -26,6 +26,7 @@ function ch_install() {
   dt_debug_args "$0" "$*"
   (
     dt_ctx $@; exit_on_err $0 $? || return $?
+    SUDO=$(_sudo)
     if [ "$(os_name)" = "debian" ] || [ "$(os_name)" = "ubuntu" ]; then
       ${SUDO} apt-get install -y apt-transport-https ca-certificates curl gnupg
       curl -fsSL 'https://packages.clickhouse.com/rpm/lts/repodata/repomd.xml.key' | sudo gpg --dearmor -o /usr/share/keyrings/clickhouse-keyring.gpg
@@ -47,6 +48,8 @@ function ch_prepare_admin_xml() {
   (
     dt_ctx $@; exit_on_err $0 $? || return $?
     if [ "$(os_name)" = "macos" ]; then
+      # sudo -E: indicates to the security policy that the user wishes to preserve their existing environment variables.
+      # The security policy may return an error if the user does not have permission to preserve the environment.
       SUDO="sudo -E"
     else
       SUDO="sudo"
@@ -68,10 +71,7 @@ function ch_user_xml_dir() {
 }
 
 function ctx_service_ch() {
-  CLICKHOUSE_DB="default"
   CLICKHOUSE_HOST="localhost"
-  CLICKHOUSE_PASSWORD="1234567890"
-  CLICKHOUSE_USER="dt_admin"
   # for clickhouse-client
   CLICKHOUSE_PORT=9000
   # for applications
@@ -84,14 +84,11 @@ function ctx_service_ch() {
   CH_USER_XML_DT="${DT_CORE}/clickhouse/admin.xml"
   CH_USER_XML="$(ch_user_xml_dir _)/admin.xml"; exit_on_err $0 $? || return $?
   CH_SERVICE=$(ch_service _); exit_on_err $0 $? || return $?
-  CH_CONFIG_XML=$(clickhouse_conf _); exit_on_err $0 $? || return $?
+  CH_CONFIG_XML=$(ch_conf _); exit_on_err $0 $? || return $?
   
   _export_envs=(
     CLICKHOUSE_HOST
     CLICKHOUSE_PORT
-    CLICKHOUSE_USER
-    CLICKHOUSE_PASSWORD
-    CLICKHOUSE_DB
     CLICKHOUSE_HTTP_PORT
     CH_USER_XML
     CH_MAJOR
@@ -109,7 +106,7 @@ function ch_user_admin() {
   CLICKHOUSE_USER="dt_admin"
 }
 
-function ch_db_postgres() {
+function ch_db_default() {
   CLICKHOUSE_DB="default"
 }
 

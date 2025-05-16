@@ -1,17 +1,15 @@
-# click sh shortcut for clickhouse-client
-function ctx_click_connn() {
+function ctx_click_conn() {
   _export_envs=(CLICKHOUSE_HOST CLICKHOUSE_PORT CLICKHOUSE_DB CLICKHOUSE_USER CLICKHOUSE_PASSWORD)
   _inline_envs=(${_export_envs[@]})
 }
 
 function ctx_click_conn_admin() {
-  ctx_click_connn
-  ctx_pg
+  ctx_service_ch
+  ctx_click_conn
   ch_db_tetrix
   ch_user_admin
 }
 
-# "click_conn_admin" can be run in any context, but it will always rewrite PGUSER and PGPASSWORD to pg_user_admin's values
 function click_conn_admin() {
   click_conn ctx_click_conn_admin
 }
