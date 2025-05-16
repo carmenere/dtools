@@ -20,7 +20,6 @@ function tmux_check_window_name() {
 
 function tmux_check_start_cmd() {
   if [ -z "${TMX_START_CMD}" ]; then echo "Parameter TMX_START_CMD is empty, but it must be set. Nothing to start." return 0; fi
-
 }
 
 function tmux_new() {
@@ -59,14 +58,28 @@ function tmux_start_sync() {
   )
 }
 
+function tmux_select_window() {
+  (
+    dt_ctx $@; exit_on_err $0 $? || return $?
+    dt_exec_or_echo "tmux select-window -t ${TMX_SESSION}:${TMX_WINDOW_NAME}"
+  )
+}
+
+function tmux_new_window() {
+  (
+    dt_ctx $@; exit_on_err $0 $? || return $?
+    dt_exec_or_echo "tmux new-window -t ${TMX_SESSION} -n ${TMX_WINDOW_NAME}"
+  )
+}
+
 function tmux_start() {
   (
     dt_ctx $@; exit_on_err $0 $? || return $?
     tmux_new $ctx
     tmux_check_window_name || return $?
     tmux_check_start_cmd || return $?
-    tmux select-window -t ${TMX_SESSION}:${TMX_WINDOW_NAME} || tmux new-window -t ${TMX_SESSION} -n ${TMX_WINDOW_NAME}
-    tmux send-keys -t ${TMX_SESSION}:${TMX_WINDOW_NAME} "${TMX_START_CMD}" ENTER
+    tmux_select_window $ctx $mode || tmux_new_window $ctx $mode
+    dt_exec_or_echo "tmux send-keys -t ${TMX_SESSION}:${TMX_WINDOW_NAME} \"${TMX_START_CMD}\" ENTER" $mode
   )
 }
 
@@ -75,7 +88,12 @@ function tmux_stop() {
     dt_ctx $@; exit_on_err $0 $? || return $?
     tmux_check_session || return $?
     tmux_check_window_name || return $?
-    tmux has-session -t ${TMX_SESSION} && tmux kill-window -t ${TMX_SESSION}:${TMX_WINDOW_NAME} || echo "Window ${TMX_SESSION}:${TMX_WINDOW_NAME} was not opened."
+    if tmux has-session -t ${TMX_SESSION}; then
+      dt_exec_or_echo "tmux kill-window -t ${TMX_SESSION}:${TMX_WINDOW_NAME}" $mode
+      echo "Stopped."
+    else
+      echo "Window ${TMX_SESSION}:${TMX_WINDOW_NAME} was not opened."
+    fi
   )
 }
 
