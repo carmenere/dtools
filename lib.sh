@@ -100,19 +100,17 @@ function dt_inline_envs() {
 # Example: ( ctx_cargo; dt_export_envs; export )
 function dt_export_envs() {
   dt_debug_args "$0" "$*"
-  envs=()
   for env in ${_export_envs}; do
     if [ -z "$env" ]; then continue; fi
     val=$(dt_escape_single_quotes "$(eval echo "\$$env")")
-    if [ -n "${val}" ]; then export ${env}="${val}"; fi
+    if [ -n "${val}" ]; then dt_exec_or_echo "export ${env}="${val}""; fi
   done
 }
 
 function dt_unexport_envs() {
   dt_debug_args "$0" "$*"
-  envs=()
   for env in ${_export_envs}; do
-    if [ -n "${val}" ]; then unset ${env}; fi
+    if [ -n "${val}" ]; then dt_exec_or_echo "unset ${env}"; fi
   done
 }
 
@@ -184,13 +182,45 @@ function dt_paths() {
 # Example: dt_deploy ctx_stand_host
 function dt_deploy() {
   dt_ctx $@; exit_on_err $0 $? || return $?
-  dt_info "Deploying stand ${BOLD}${MAGENTA}$ctx${RESET} ... "
+  dt_info "Deploying stand ${BOLD}$ctx${RESET} ... "
   for step in $(for s in ${steps}; do echo "${s}"; done | sort -n -t _ -k 2); do
     dt_info "Running step ${BOLD}${CYAN}$step${RESET} ... "
     for target in $(eval echo "\${${step}[@]}"); do
       dt_target $target; exit_on_err $0 $? || return $?
     done
   done
+}
+
+# for example, pattern may be *=
+#${VAR#pattern}     # delete shortest match of pattern from the beginning
+#${VAR##pattern}    # delete longest match of pattern from the beginning
+#${VAR%pattern}     # delete shortest match of pattern from the end
+#${VAR%%pattern}    # delete longest match of pattern from the end
+
+# Some commands use one context (cctx) for parameters for connection and another context (tctx) for parameters for template.
+# Example: PGUSER=foo psql -c "CREATE USER ${PGUSER}", here
+#  - first user (PGUSER=foo) is used for connection;
+#  - second user ("... ${PGUSER}") is used to generate SQL query;
+function dt_conn_and_tmpl_parse_args() {
+  dt_debug_args "$0" "$*"
+  for v in $@; do
+    case "$v" in
+      q=*) tctx=${v#*=};; # MANDATORY: ctx of template
+      c=*) cctx=${v#*=};; # MANDATORY: ctx of connection
+      t=*) tmpl=${v#*=};; # MANDATORY: template
+      m=*) mode=${v#*=};;
+      *) >&2 dt_error $0 "Unexpected parameter $v."; return 99;;
+    esac
+  done
+  if [ -z "${tctx}" ]; then
+    >&2 dt_error $0 "Ctx of template is empty: tctx='${tctx}'."; return 99
+  fi
+  if [ -z "${cctx}" ]; then
+    >&2 dt_error $0 "Ctx of connection is empty: cctx='${cctx}'."; return 99
+  fi
+  if [ -z "${tmpl}" ]; then
+    >&2 dt_error $0 "Template is empty: tmpl='${tmpl}'."; return 99
+  fi
 }
 
 function dt_defaults() {

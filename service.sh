@@ -8,10 +8,10 @@ function service() {
 
 function service_stop() {
   if [ -z "${SERVICE}" ]; then echo "Service name was not provided."; return 99; fi
-  $(service) stop "${SERVICE}"
+  dt_exec_or_echo "$(service) stop '${SERVICE}'"
 }
 
 function service_start() {
   if [ -z "${SERVICE}" ]; then echo "Service name was not provided."; return 99; fi
-  $(service) start "${SERVICE}"
+  dt_exec_or_echo "$(service) start '${SERVICE}'"
 }
